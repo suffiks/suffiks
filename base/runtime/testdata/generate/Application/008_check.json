@@ -1,0 +1,129 @@
+{
+  "description": "Application is the base Schema for the application API",
+  "type": "object",
+  "properties": {
+    "apiVersion": {
+      "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "type": "string"
+    },
+    "kind": {
+      "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "type": "string"
+    },
+    "metadata": {
+      "type": "object"
+    },
+    "spec": {
+      "description": "ApplicationSpec defines the desired state of Application",
+      "type": "object",
+      "required": [
+        "image"
+      ],
+      "properties": {
+        "command": {
+          "description": "Override command when starting Docker image.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "description": "Custom environment variables injected into your container. Specify either `value` or `valueFrom`, but not both.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "description": "Environment variable name. May only contain letters, digits, and the underscore `_` character.",
+                "type": "string"
+              },
+              "value": {
+                "description": "Environment variable value. Numbers and boolean values must be quoted. Required unless `valueFrom` is specified.",
+                "type": "string"
+              },
+              "valueFrom": {
+                "description": "Dynamically set environment variables based on fields found in the Pod spec.",
+                "type": "object",
+                "required": [
+                  "fieldRef"
+                ],
+                "properties": {
+                  "fieldRef": {
+                    "type": "object",
+                    "required": [
+                      "fieldPath"
+                    ],
+                    "properties": {
+                      "fieldPath": {
+                        "description": "Field value from the `Pod` spec that should be copied into the environment variable.",
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "envFrom": {
+          "description": "EnvFrom exposes all variables in the ConfigMap or Secret resources as environment variables. One of `configMap` or `secret` is required. \n Environment variables will take the form `KEY=VALUE`, where `key` is the ConfigMap or Secret key. You can specify as many keys as you like in a single ConfigMap or Secret. \n The ConfigMap and Secret resources must live in the same Kubernetes namespace as the Application resource.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "configmap": {
+                "description": "Name of the `ConfigMap` where environment variables are specified. Required unless `secret` is set.",
+                "type": "string"
+              },
+              "secret": {
+                "description": "Name of the `Secret` where environment variables are specified. Required unless `configMap` is set.",
+                "type": "string"
+              }
+            }
+          }
+        },
+        "image": {
+          "description": "Your application's Docker image location and tag.",
+          "type": "string"
+        },
+        "obj": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string"
+            }
+          }
+        },
+        "port": {
+          "description": "The port number which is exposed by the container and should receive traffic.",
+          "type": "integer"
+        }
+      }
+    },
+    "status": {
+      "type": "object",
+      "properties": {
+        "availableReplicas": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hash": {
+          "type": "string"
+        },
+        "replicas": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+domain: suffiks.com
+layout:
+  - go.kubebuilder.io/v3
+projectName: suffiks2
+repo: github.com/suffiks/suffiks
+resources:
+  - api:
+      crdVersion: v1
+    controller: true
+    domain: suffiks.com
+    group: suffiks
+    kind: Extension
+    path: github.com/suffiks/suffiks/api/v1
+    version: v1
+    webhooks:
+      validation: true
+      webhookVersion: v1
+version: "3"

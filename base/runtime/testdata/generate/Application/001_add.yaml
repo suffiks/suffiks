@@ -1,0 +1,14 @@
+properties:
+  ingresses:
+    description: List of URLs that will route HTTPS traffic to the application.
+      All URLs must start with `https://`. Domain availability differs according
+      to which environment your application is running in.
+    items:
+      type: string
+    type: array
+  obj:
+    type: object
+    properties:
+      key:
+        type: string
+type: object

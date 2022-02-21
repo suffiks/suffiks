@@ -1,0 +1,20 @@
+apiVersion: suffiks.com/v1
+kind: Work
+metadata:
+  name: work-sample
+  namespace: default
+  annotations:
+    suffiks.com/security-does-not-matter: "true"
+spec:
+  image: hello-world
+  restartPolicy: Never
+  schedule: "* * * * *"
+  # webproxy: true
+  # port: 80
+  # prometheus:
+  #   enabled: true
+  #   port: "9090"
+  #   path: "/_metrics"
+  # ingresses:
+  #   - https://myapp.org
+  #   - https://myapp.org/with/path

@@ -1,0 +1,7 @@
+- [ ] Ensure extension service is available before addding it?
+- [x] Sync concurrently with extension services.
+- [ ] Support updating extensions.
+- [ ] Rescue from panics in extensions.
+- [ ] Retry if extension GRPC connection is closed
+- [ ] Configuration using [component config](https://book.kubebuilder.io/component-config-tutorial/tutorial.html)?
+- [ ] Consider moving extensions into it's own module (reducing number of dependencies).

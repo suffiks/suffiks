@@ -1,0 +1,16 @@
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+  - crd/{{.Name}}.yaml
+  - manager/deployment.yaml
+  - manager/service.yaml
+  - rbac/service_account.yaml
+# Uncomment the following if you want to enable RBAC
+# - rbac/role.yaml
+# - rbac/role_binding.yaml
+
+patchesStrategicMerge:
+  - {{.Name}}_patch.yaml
+
+namespace: system

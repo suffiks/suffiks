@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+import "k8s.io/api/core/v1/generated.proto";
+
+option go_package = "extension/protogen;protogen";
+
+enum ValidationType {
+  CREATE = 0;
+  UPDATE = 1;
+  DELETE = 2;
+}
+
+service Extension {
+  rpc Sync(SyncRequest) returns (stream Response) {}
+  rpc Delete(SyncRequest) returns (stream Response) {}
+  rpc Default(SyncRequest) returns (DefaultResponse) {}
+  rpc Validate(ValidationRequest) returns (ValidationResponse) {}
+}
+
+message ValidationRequest {
+  ValidationType type = 1;
+  SyncRequest sync = 2;
+  SyncRequest old = 3;
+}
+
+message ValidationError {
+  string path = 1;
+  string detail = 2;
+  string value = 3;
+}
+
+message ValidationResponse { repeated ValidationError errors = 1; }
+message DefaultResponse { bytes spec = 1; }
+
+message Owner {
+  string kind = 1;
+  string name = 2;
+  string namespace = 3;
+  string apiVersion = 4;
+  string uid = 5;
+  map<string, string> labels = 6;
+  map<string, string> annotations = 7;
+  string revisionID = 8;
+}
+
+message SyncRequest {
+  Owner owner = 1;
+  bytes spec = 2;
+}
+
+message KeyValue {
+  string name = 1;
+  string value = 2;
+}
+
+enum EnvFromType {
+  CONFIGMAP = 0;
+  SECRET = 1;
+}
+
+message EnvFrom {
+  string name = 1;
+  bool optional = 2;
+  EnvFromType type = 3;
+}
+
+message Response {
+  oneof OFResponse {
+    KeyValue env = 1;
+    KeyValue label = 2;
+    KeyValue annotation = 3;
+    EnvFrom envFrom = 4;
+    k8s.io.api.core.v1.Container initContainer = 6;
+    k8s.io.api.core.v1.Container container = 7;
+    bytes mergePatch = 5;
+  }
+}

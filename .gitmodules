@@ -1,0 +1,6 @@
+[submodule "extension/proto/thirdparty/k8s.io/api"]
+	path = extension/proto/thirdparty/k8s.io/api
+	url = https://github.com/kubernetes/api
+[submodule "extension/proto/thirdparty/k8s.io/apimachinery"]
+	path = extension/proto/thirdparty/k8s.io/apimachinery
+	url = https://github.com/kubernetes/apimachinery

@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Name }}"
+  namespace: system
+  labels:
+    extension: "{{ .Name }}"
+spec:
+  selector:
+    matchLabels:
+      extension: "{{ .Name }}"
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: extension
+      labels:
+        extension: "{{ .Name }}"
+    spec:
+      containers:
+        - name: extension
+          image: "{{ .Repo }}"
+          imagePullPolicy: Never
+      serviceAccountName: "{{ .Name }}"
+      terminationGracePeriodSeconds: 10

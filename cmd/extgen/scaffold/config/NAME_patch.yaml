@@ -1,0 +1,9 @@
+apiVersion: suffiks.com/v1
+kind: Extension
+metadata:
+  name: "{{ .Name}}"
+spec:
+  controller:
+    namespace: system
+    service: "{{ .Name }}"
+    port: 4269

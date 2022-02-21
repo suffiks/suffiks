@@ -1,0 +1,25 @@
+apiVersion: suffiks.com/v1
+kind: Application
+metadata:
+  name: application-sample
+  namespace: default
+  # annotations:
+  #   suffiks.com/security-does-not-matter: "true"
+spec:
+  port: 80
+  image: nginxdemos/hello # Will fail with podsecurity
+  ingresses:
+    - host: mydomain.org
+      paths: ["/"]
+  # image: borosr/go-echo
+  # replicas:
+  # min: 2
+  # max: 4
+  # webproxy: true
+  # prometheus:
+  #   enabled: true
+  #   port: "9090"
+  #   path: "/_metrics"
+  # ingresses:
+  #   - https://myapp.org
+  #   - https://myapp.org/with/path

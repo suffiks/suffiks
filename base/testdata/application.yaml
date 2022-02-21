@@ -1,0 +1,135 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: applications.suffiks.com
+spec:
+  group: suffiks.com
+  names:
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    singular: application
+  scope: Namespaced
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: Application is the base Schema for the application API
+          properties:
+            apiVersion:
+              description:
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
+              description:
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              description: ApplicationSpec defines the desired state of Application
+              properties:
+                command:
+                  description: Override command when starting Docker image.
+                  items:
+                    type: string
+                  type: array
+                env:
+                  description:
+                    Custom environment variables injected into your container.
+                    Specify either `value` or `valueFrom`, but not both.
+                  items:
+                    properties:
+                      name:
+                        description:
+                          Environment variable name. May only contain letters,
+                          digits, and the underscore `_` character.
+                        type: string
+                      value:
+                        description:
+                          Environment variable value. Numbers and boolean
+                          values must be quoted. Required unless `valueFrom` is specified.
+                        type: string
+                      valueFrom:
+                        description:
+                          Dynamically set environment variables based on
+                          fields found in the Pod spec.
+                        properties:
+                          fieldRef:
+                            properties:
+                              fieldPath:
+                                description:
+                                  Field value from the `Pod` spec that should
+                                  be copied into the environment variable.
+                                type: string
+                            required:
+                              - fieldPath
+                            type: object
+                        required:
+                          - fieldRef
+                        type: object
+                    required:
+                      - name
+                    type: object
+                  type: array
+                envFrom:
+                  description:
+                    "EnvFrom exposes all variables in the ConfigMap or Secret
+                    resources as environment variables. One of `configMap` or `secret`
+                    is required. \n Environment variables will take the form `KEY=VALUE`,
+                    where `key` is the ConfigMap or Secret key. You can specify as many
+                    keys as you like in a single ConfigMap or Secret. \n The ConfigMap
+                    and Secret resources must live in the same Kubernetes namespace
+                    as the Application resource."
+                  items:
+                    properties:
+                      configmap:
+                        description:
+                          Name of the `ConfigMap` where environment variables
+                          are specified. Required unless `secret` is set.
+                        type: string
+                      secret:
+                        description:
+                          Name of the `Secret` where environment variables
+                          are specified. Required unless `configMap` is set.
+                        type: string
+                    type: object
+                  type: array
+                image:
+                  description: Your application's Docker image location and tag.
+                  type: string
+                port:
+                  description:
+                    The port number which is exposed by the container and
+                    should receive traffic.
+                  type: integer
+              required:
+                - image
+              type: object
+            status:
+              properties:
+                availableReplicas:
+                  format: int32
+                  type: integer
+                hash:
+                  type: string
+                replicas:
+                  format: int32
+                  type: integer
+              type: object
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

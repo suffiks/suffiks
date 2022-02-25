@@ -44,6 +44,10 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	tracingAddr := "traces.grafana:4317"
+	if ta := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); ta != "" {
+		tracingAddr = ta
+	}
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8090", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8091", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -182,7 +186,7 @@ func main() {
 	}
 
 	tracerLog := ctrl.Log.WithName("tracing")
-	err = tracing.Provider(ctx, tracerLog, "github.com/suffiks/suffiks", "v0.0.1", "local", "collector.jaeger:4317")
+	err = tracing.Provider(ctx, tracerLog, "github.com/suffiks/suffiks", "v0.0.1", "local", tracingAddr)
 	if err != nil {
 		setupLog.Error(err, "unable to create tracer provider")
 		os.Exit(1)

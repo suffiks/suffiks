@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= github.com/suffiks/suffiks:latest
+IMG ?= ghcr.io/suffiks/suffiks:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:preserveUnknownFields=false"
 
@@ -88,6 +88,11 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 
+## Create helm chart
+helm: manifests kustomize helmify
+	mkdir -p chart
+	cd chart &&	$(KUSTOMIZE) build ../config/default | $(HELMIFY) suffiks
+
 ##@ extensions
 gen-extensions:
 	mkdir -p extension/protogen
@@ -115,11 +120,13 @@ $(LOCALBIN): ## Ensure that the directory exists
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+HELMIFY ?= $(LOCALBIN)/helmify
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.6.2
 ENVTEST_VERSION ?= latest
+HELMIFY_VERSION ?= v0.3.8
 
 KUSTOMIZE_BUNDLE = kustomize_$(KUSTOMIZE_VERSION)_$(shell go env GOOS)_$(shell go env GOARCH).tar.gz
 KUSTOMIZE_URL = https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F$(KUSTOMIZE_VERSION)/$(KUSTOMIZE_BUNDLE)
@@ -138,3 +145,8 @@ $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
 envtest: $(ENVTEST)
 $(ENVTEST): ## Download envtest-setup locally if necessary.
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+
+.PHONY: helmify
+helmify: $(HELMIFY)
+$(HELMIFY): ## Download helmify locally if necessary.
+	GOBIN=$(LOCALBIN) go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)

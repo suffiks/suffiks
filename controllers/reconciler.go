@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 	"strconv"
 
@@ -21,6 +22,7 @@ import (
 type Reconciler[V base.Object] interface {
 	NewObject() V
 	CreateOrUpdate(ctx context.Context, obj V, changeset *base.Changeset) error
+	Delete(ctx context.Context, obj V) error
 	UpdateStatus(ctx context.Context, obj V, extensions []string) error
 	IsModified(ctx context.Context, obj V) (bool, error)
 	Extensions(obj V) []string
@@ -42,6 +44,9 @@ type ReconcilerWrapper[V base.Object] struct {
 
 func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
+	if kind == "" {
+		kind = fmt.Sprintf("%T", r.Child.NewObject())
+	}
 
 	ctx, span := tracing.Start(ctx, "Reconcile."+kind)
 	defer span.End()
@@ -62,20 +67,31 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 			return ctrl.Result{}, nil
 		}
 
+		if err := r.Child.Delete(ctx, v); err != nil {
+			log.Error(err, "unable to delete from child, will try again later")
+			return r.handleError(ctx, err, "unable to delete from child")
+		}
+
+		if err := r.CRDController.Delete(ctx, v); err != nil {
+			log.Error(err, "unable to delete from extensions, will try again later")
+			return r.handleError(ctx, err, "unable to delete from extensions")
+		}
+
 		span.SetAttributes(attribute.String("action", "delete"))
 		// remove our finalizer from the list and update it.
 		controllerutil.RemoveFinalizer(v, suffiksFinalizer)
 
-		if err := r.Patch(ctx, v, client.Apply, client.FieldOwner("suffiks")); err != nil {
+		if err := r.Update(ctx, v); err != nil {
 			return r.handleError(ctx, err, "unable to remove finalizer", client.IgnoreNotFound)
 		}
+
 		return ctrl.Result{}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(v, suffiksFinalizer) {
 		span.SetAttributes(attribute.String("action", "add finalizer"))
 		controllerutil.AddFinalizer(v, suffiksFinalizer)
-		if err := r.Patch(ctx, v, client.Apply, client.FieldOwner("suffiks")); err != nil {
+		if err := r.Update(ctx, v); err != nil {
 			return r.handleError(ctx, err, "unable to add finalizer")
 		}
 		return ctrl.Result{}, nil
@@ -90,7 +106,7 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 			return r.handleError(ctx, err, "unable to update child status on non-modified object")
 		}
 
-		err = r.Status().Patch(ctx, v, client.Apply, client.FieldOwner("suffiks"))
+		err = r.Status().Update(ctx, v)
 		return r.handleError(ctx, err, "unable to update status on non-modified object")
 	}
 
@@ -116,7 +132,7 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.handleError(ctx, err, "unable to update child status")
 	}
 
-	err = r.Status().Patch(ctx, v, client.Apply, client.FieldOwner("suffiks"))
+	err = r.Status().Update(ctx, v)
 	return r.handleError(ctx, err, "unable to update status")
 }
 

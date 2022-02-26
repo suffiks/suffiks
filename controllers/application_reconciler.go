@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch"
+	suffiksv1 "github.com/suffiks/suffiks/api/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
 	"go.opentelemetry.io/otel/attribute"
@@ -14,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -43,7 +45,12 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *base.Applicatio
 	ctx, span := tracing.Start(ctx, "AppReconciler.CreateOrUpdate")
 	defer span.End()
 
-	depl := a.newDeployment(app)
+	spec, err := app.WellKnownSpec()
+	if err != nil {
+		return err
+	}
+
+	depl := a.newDeployment(app, spec)
 	if err := controllerutil.SetControllerReference(app, depl, a.Scheme); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("unable to set controller reference: %w", err)
@@ -56,19 +63,57 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *base.Applicatio
 
 	depl.Spec.Template.Annotations = mergeMaps(depl.Spec.Template.Annotations, depl.Annotations)
 
-	if err := a.Client.Create(ctx, depl); err != nil {
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      app.Name,
+			Namespace: app.Namespace,
+			Labels:    make(map[string]string),
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(spec.Port),
+				},
+			},
+			Selector: map[string]string{
+				"app": app.Name,
+			},
+		},
+	}
+	for k, v := range depl.Labels {
+		svc.Labels[k] = v
+	}
+
+	if err := a.Client.Create(ctx, svc); err != nil {
 		if errors.IsAlreadyExists(err) {
-			span.SetAttributes(attribute.String("action", "update"))
-			if err := a.Client.Update(ctx, depl); err != nil {
+			span.SetAttributes(attribute.String("action", "update svc"))
+			if err := a.Client.Update(ctx, svc); err != nil {
 				span.RecordError(err)
-				return fmt.Errorf("Reconcile update: %w", err)
+				return fmt.Errorf("Reconcile update svc: %w", err)
 			}
 		} else {
 			span.RecordError(err)
-			return fmt.Errorf("Reconcile create: %w", err)
+			return fmt.Errorf("Reconcile create svc: %w", err)
 		}
 	} else {
-		span.SetAttributes(attribute.String("action", "create"))
+		span.SetAttributes(attribute.String("action", "create svc"))
+	}
+
+	if err := a.Client.Create(ctx, depl); err != nil {
+		if errors.IsAlreadyExists(err) {
+			span.SetAttributes(attribute.String("action", "update depl"))
+			if err := a.Client.Update(ctx, depl); err != nil {
+				span.RecordError(err)
+				return fmt.Errorf("Reconcile update depl: %w", err)
+			}
+		} else {
+			span.RecordError(err)
+			return fmt.Errorf("Reconcile create depl: %w", err)
+		}
+	} else {
+		span.SetAttributes(attribute.String("action", "create depl"))
 	}
 	return nil
 }
@@ -105,14 +150,26 @@ func (a *AppReconciler) IsModified(ctx context.Context, app *base.Application) (
 		}
 
 		// TODO(thokra): We don't yet create services
-		// if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
-		// 	return true, nil
-		// } else if err != nil {
-		// 	return false, err
-		// }
+		if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
+			return true, nil
+		} else if err != nil {
+			return false, err
+		}
 		return false, nil
 	}
 	return true, nil
+}
+
+func (a *AppReconciler) Delete(ctx context.Context, app *base.Application) error {
+	err := a.Client.Delete(ctx, &appsv1.Deployment{ObjectMeta: a.objectMeta(app)})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	err = a.Client.Delete(ctx, &corev1.Service{ObjectMeta: a.objectMeta(app)})
+	if err != nil && !errors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func (a *AppReconciler) Extensions(app *base.Application) []string {
@@ -126,21 +183,13 @@ func (a *AppReconciler) Owns() []client.Object {
 	}
 }
 
-func (a *AppReconciler) newDeployment(app *base.Application) *appsv1.Deployment {
+func (a *AppReconciler) newDeployment(app *base.Application, spec suffiksv1.ApplicationSpec) *appsv1.Deployment {
 	labels := map[string]string{
 		"app": app.Name,
 	}
 
-	spec, err := app.WellKnownSpec()
-	if err != nil {
-		panic(err)
-	}
-
 	return &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      app.Name,
-			Namespace: app.Namespace,
-		},
+		ObjectMeta: a.objectMeta(app),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: pointer.Int32Ptr(1),
 			Selector: &metav1.LabelSelector{
@@ -167,6 +216,13 @@ func (a *AppReconciler) newDeployment(app *base.Application) *appsv1.Deployment 
 				},
 			},
 		},
+	}
+}
+
+func (a *AppReconciler) objectMeta(app *base.Application) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Name:      app.Name,
+		Namespace: app.Namespace,
 	}
 }
 

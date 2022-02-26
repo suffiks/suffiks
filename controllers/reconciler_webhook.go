@@ -7,19 +7,31 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/suffiks/suffiks/base"
+	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
+	"go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logr "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var _ admission.CustomValidator = &ReconcilerWrapper[*base.Application]{}
 
 func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.ValidationType, newObj, oldObj runtime.Object) error {
-	log := log.FromContext(ctx)
+	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
+	if kind == "" {
+		kind = fmt.Sprintf("%T", r.Child.NewObject())
+	}
+
+	ctx, span := tracing.Start(ctx, "Validate."+kind)
+	defer span.End()
+	span.SetAttributes(attribute.String("type", string(typ)))
+
+	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
+	ctx = logr.IntoContext(ctx, log)
 
 	var (
 		newV  V
@@ -40,6 +52,8 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 		}
 	}
 
+	span.SetAttributes(attribute.String("name", v.GetName()), attribute.String("namespace", v.GetNamespace()))
+
 	if err := r.CRDController.Validate(ctx, typ, newV, oldV); err != nil {
 		if ferr, ok := err.(base.FieldErrsWrapper); ok {
 			return apierrors.NewInvalid(
@@ -50,6 +64,7 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 		}
 
 		log.Error(err, "extension validation error")
+		span.RecordError(err)
 		return apierrors.NewInternalError(err)
 	}
 
@@ -58,6 +73,18 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 
 func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) error {
 	v := obj.(V)
+	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
+	if kind == "" {
+		kind = fmt.Sprintf("%T", r.Child.NewObject())
+	}
+
+	ctx, span := tracing.Start(ctx, "Validate."+kind)
+	defer span.End()
+	span.SetAttributes(attribute.String("type", "default"))
+	span.SetAttributes(attribute.String("name", v.GetName()), attribute.String("namespace", v.GetNamespace()))
+
+	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
+	ctx = logr.IntoContext(ctx, log)
 
 	defaults, err := r.CRDController.Default(ctx, v)
 	if err != nil {

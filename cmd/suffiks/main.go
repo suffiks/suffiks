@@ -66,7 +66,7 @@ func main() {
 		}),
 		ZapOpts: []uzap.Option{
 			uzap.AddCaller(),
-			// uzap.AddCallerSkip(2),
+			uzap.AddCallerSkip(0),
 			// uzap.AddStacktrace(zapcore.InfoLevel),
 		},
 	}

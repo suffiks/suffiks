@@ -66,6 +66,15 @@ func (j *JobReconciler) CreateOrUpdate(ctx context.Context, job *base.Work, chan
 	return err
 }
 
+func (j *JobReconciler) Delete(ctx context.Context, job *base.Work) error {
+	return j.Client.Delete(ctx, &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      job.Name,
+			Namespace: job.Namespace,
+		},
+	})
+}
+
 func (j *JobReconciler) createOrUpdateJob(ctx context.Context, job *base.Work, spec suffiksv1.WorkSpec, changeset *base.Changeset) error {
 	jb := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

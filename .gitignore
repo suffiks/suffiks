@@ -24,5 +24,7 @@ testbin/*
 *.swo
 *~
 cmd/extgen/extgen
+cmd/suffiks/suffiks
+scratchpad
 
 .vscode

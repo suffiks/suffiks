@@ -41,18 +41,9 @@ func init() {
 }
 
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var probeAddr string
-	tracingAddr := "traces.grafana:4317"
-	if ta := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); ta != "" {
-		tracingAddr = ta
-	}
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8090", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8091", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
-		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+	var configFile string
+	flag.StringVar(&configFile, "config-file", "", "Path to the configuration file.")
+
 	opts := zap.Options{
 		Development: true,
 		Level:       zapcore.InfoLevel,
@@ -77,6 +68,17 @@ func main() {
 
 	setupLog := ctrl.Log.WithName("setup")
 
+	var err error
+	ctrlConfig := suffiksv1.ProjectConfig{}
+	options := ctrl.Options{Scheme: scheme}
+	if configFile != "" {
+		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
+		if err != nil {
+			setupLog.Error(err, "unable to load configuration")
+			os.Exit(1)
+		}
+	}
+
 	cfg := ctrl.GetConfigOrDie()
 	cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
 		return otelhttp.NewTransport(rt, otelhttp.WithFilter(func(r *http.Request) bool {
@@ -84,14 +86,7 @@ func main() {
 			return span.IsRecording()
 		}))
 	}
-	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "0ff08fbf.suffiks.com",
-	})
+	mgr, err := ctrl.NewManager(cfg, options)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
@@ -153,7 +148,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	if ctrlConfig.WebhooksDisabled {
 		if err = (&suffiksv1.Extension{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Extension")
 			os.Exit(1)
@@ -186,7 +181,7 @@ func main() {
 	}
 
 	tracerLog := ctrl.Log.WithName("tracing")
-	err = tracing.Provider(ctx, tracerLog, "github.com/suffiks/suffiks", "v0.0.1", "local", tracingAddr)
+	err = tracing.Provider(ctx, tracerLog, ctrlConfig.Tracing)
 	if err != nil {
 		setupLog.Error(err, "unable to create tracer provider")
 		os.Exit(1)

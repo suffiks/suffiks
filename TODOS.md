@@ -5,3 +5,4 @@
 - [ ] Retry if extension GRPC connection is closed
 - [ ] Configuration using [component config](https://book.kubebuilder.io/component-config-tutorial/tutorial.html)?
 - [ ] Consider moving extensions into it's own module (reducing number of dependencies).
+- [ ] Remove `Status.Hash` requirement. Possibly allowing extensions to set statuses etc as well.

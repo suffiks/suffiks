@@ -2,9 +2,10 @@ package tracing
 
 import (
 	"context"
-	"strings"
+	"runtime/debug"
 
 	"github.com/go-logr/logr"
+	suffiksv1 "github.com/suffiks/suffiks/api/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -17,15 +18,35 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const name = "suffiks"
+
 var (
 	tracer   otrace.Tracer = otrace.NewNoopTracerProvider().Tracer("noop")
 	provider *trace.TracerProvider
 )
 
-func Provider(ctx context.Context, log logr.Logger, name, version, environment, url string) error {
+func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig) error {
+	if !cfg.Enabled() {
+		return nil
+	}
+
+	dirty := true
+	revision := "unknown"
+
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range bi.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				revision = setting.Value
+			case "vcs.modified":
+				dirty = setting.Value == "true"
+			}
+		}
+	}
+
 	opts := []otlptracegrpc.Option{}
-	if url != "" {
-		opts = append(opts, otlptracegrpc.WithEndpoint(url))
+	if cfg.OTLPEndpoint != "" {
+		opts = append(opts, otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint))
 	}
 	client := otlptracegrpc.NewClient(opts...)
 	exp, err := otlptrace.New(ctx, client)
@@ -33,18 +54,28 @@ func Provider(ctx context.Context, log logr.Logger, name, version, environment, 
 		return err
 	}
 
-	parts := strings.Split(name, "/")
+	cfgAttrs := []attribute.KeyValue{
+		semconv.ServiceNameKey.String(name),
+		semconv.ServiceVersionKey.String(revision),
+	}
+	for k, v := range cfg.Attributes {
+		cfgAttrs = append(cfgAttrs, attribute.String(k, v))
+	}
+
+	if dirty {
+		cfgAttrs = append(cfgAttrs, attribute.Bool("modified", true))
+	}
 
 	provider = trace.NewTracerProvider(
 		// Always be sure to batch in production.
 		trace.WithBatcher(exp),
 		// Record information about this application in an Resource.
-		trace.WithResource(resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceNameKey.String(parts[len(parts)-1]),
-			semconv.ServiceVersionKey.String(version),
-			attribute.String("environment", environment),
-		)),
+		trace.WithResource(
+			resource.NewWithAttributes(
+				semconv.SchemaURL,
+				cfgAttrs...,
+			),
+		),
 	)
 
 	otel.SetTextMapPropagator(propagation.TraceContext{})

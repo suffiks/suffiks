@@ -87,6 +87,10 @@ func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig)
 }
 
 func Shutdown(ctx context.Context) error {
+	if provider == nil {
+		return nil
+	}
+
 	return provider.Shutdown(ctx)
 }
 

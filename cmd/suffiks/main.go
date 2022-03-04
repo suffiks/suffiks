@@ -148,7 +148,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if ctrlConfig.WebhooksDisabled {
+	if !ctrlConfig.WebhooksDisabled {
 		if err = (&suffiksv1.Extension{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Extension")
 			os.Exit(1)

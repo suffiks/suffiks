@@ -22,7 +22,7 @@ type ConfigSpec struct {
 	Tracing suffiksv1.TracingConfig `json:"tracing"`
 }
 
-func (c *ConfigSpec) getListenAddress() string {
+func (c ConfigSpec) getListenAddress() string {
 	if c.ListenAddress == "" {
 		return ":4269"
 	}
@@ -30,11 +30,9 @@ func (c *ConfigSpec) getListenAddress() string {
 	return c.ListenAddress
 }
 
-func (c *ConfigSpec) getTracing() suffiksv1.TracingConfig {
+func (c ConfigSpec) getTracing() suffiksv1.TracingConfig {
 	return c.Tracing
 }
-
-func (c ConfigSpec) extensionConfig() {}
 
 func ReadConfig(filePath string, v Config) error {
 	b, err := os.ReadFile(filePath)

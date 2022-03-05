@@ -9,7 +9,8 @@ import (
 )
 
 func main() {
-	if err := extension.Serve[*controller.Ingresses](context.Background(), ":3000", &controller.IngressExtension{}); err != nil {
+	config := extension.ConfigSpec{}
+	if err := extension.Serve[*controller.Ingresses](context.Background(), config, &controller.IngressExtension{}); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/go-logr/logr"
+	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/sync/errgroup"
@@ -135,15 +137,25 @@ func (s *server[T]) Validate(ctx context.Context, req *protogen.ValidationReques
 	return resp, nil
 }
 
-func Serve[T any](ctx context.Context, address string, ext Extension[T]) error {
-	lis, err := net.Listen("tcp", address)
+func Serve[T any](ctx context.Context, config Config, ext Extension[T]) error {
+	lis, err := net.Listen("tcp", config.getListenAddress())
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
-	)
+
+	opts := []grpc.ServerOption{}
+	if config.getTracing().Enabled() {
+		opts = append(
+			opts,
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+		)
+
+		if err := tracing.Provider(ctx, logr.Discard(), config.getTracing()); err != nil {
+			return err
+		}
+	}
+	s := grpc.NewServer(opts...)
 
 	protogen.RegisterExtensionServer(s, NewServer(ext))
 

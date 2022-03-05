@@ -8,9 +8,9 @@ metadata:
 spec:
   port: 80
   image: nginxdemos/hello # Will fail with podsecurity
-  ingresses:
-    - host: mydomain.org
-      paths: ["/"]
+  # ingresses:
+  #   - host: mydomain.org
+  #     paths: ["/"]
   # image: borosr/go-echo
   # replicas:
   # min: 2

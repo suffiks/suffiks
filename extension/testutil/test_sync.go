@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/suffiks/suffiks/base"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,8 +34,8 @@ func (s SyncTest) runTest(t *testing.T, ctrl *base.ExtensionController, client *
 		}
 	}
 
-	if s.Changeset != nil && !cmp.Equal(s.Changeset, cs) {
-		t.Error(cmp.Diff(s.Changeset, cs))
+	if s.Changeset != nil && !cmp.Equal(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(base.Changeset{})) {
+		t.Error(cmp.Diff(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(base.Changeset{})))
 	}
 
 	for _, exp := range s.Expected {

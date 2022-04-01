@@ -1,11 +1,10 @@
 generate:
-	../../suffiks/cmd/extgen/extgen crd -type {{ .GoName }}
-	../../suffiks/cmd/extgen/extgen rbac -name {{ .Name }}-extension
+	extgen crd --source ./{{.Name}} -type {{ .GoName }}
+	extgen rbac --source ./{{.Name}} -name {{ .Name }}-extension
 
-docker:
-	go mod vendor
-	docker build -t github.com/suffiks/extensions/{{ .Name }}:latest .
+docker-build:
+	docker build -t github.com/suffiks/extension-{{ .Name }}:latest .
 
 kind: docker
-	kind load docker-image github.com/suffiks/extensions/{{ .Name }}:latest
+	kind load docker-image github.com/suffiks/extension-{{ .Name }}:latest
 	kubectl apply -k config

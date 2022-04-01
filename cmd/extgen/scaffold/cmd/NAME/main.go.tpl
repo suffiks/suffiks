@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -16,35 +18,49 @@ import (
 {{end -}}
 
 	"github.com/suffiks/suffiks/extension"
-	"{{ .Repo }}/controllers"
+	"{{ .Repo }}/{{ .Name }}"
 )
 
+var configFile string
+
+func init() {
+	flag.StringVar(&configFile, "config-file", "", "path to config file")
+}
+
 func main() {
-	if err := run(); err != nil {
+	flag.Parse()
+
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if err := run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	{{- if .Kubernetes}}
-	config, err := rest.InClusterConfig()
+	konfig, err := rest.InClusterConfig()
 	if err != nil {
 		return err
 	}
-	client, err := kubernetes.NewForConfig(config)
+	client, err := kubernetes.NewForConfig(konfig)
 	if err != nil {
 		return err
 	}
 
 	{{end -}}
 
-	ext := &controllers.{{.GoName}}Extension{
+	config := &{{ .Name }}.Config{}
+	if err := extension.ReadConfig(configFile, config); err != nil {
+		return err
+	}
+
+	fmt.Println("Listening on", config.ListenAddress)
+
+	ext := &{{ .Name }}.Extension{
 	{{- if .Kubernetes}}
 		Client: client,
 	{{end}}
 	}
-
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
-	defer cancel()
-	return extension.Serve[*controllers.{{.GoName}}](ctx, ":4269", ext)
+	return extension.Serve[*{{ .Name }}.{{.GoName}}](ctx, config, ext)
 }

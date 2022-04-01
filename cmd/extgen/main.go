@@ -65,6 +65,7 @@ var crdGen = &cli.Command{
 			Value: "./controllers",
 		},
 	},
+
 	Action: func(c *cli.Context) error {
 		types := c.StringSlice("type")
 		if len(types) == 0 {
@@ -91,7 +92,7 @@ var crdGen = &cli.Command{
 		for _, pkg := range packages {
 			pars.NeedPackage(pkg)
 		}
-		if err := os.MkdirAll(c.String("output"), 0755); err != nil {
+		if err := os.MkdirAll(c.String("output"), 0o755); err != nil {
 			return err
 		}
 
@@ -102,6 +103,7 @@ var crdGen = &cli.Command{
 			})
 		}
 
+		createdCRDs := 0
 	OUTER:
 		for k := range pars.Schemata {
 			found := false
@@ -169,6 +171,11 @@ var crdGen = &cli.Command{
 			if err != nil {
 				return err
 			}
+			createdCRDs++
+		}
+
+		if createdCRDs == 0 {
+			return fmt.Errorf("no CRDs created")
 		}
 
 		return nil
@@ -217,7 +224,7 @@ var rbacGen = &cli.Command{
 			return err
 		}
 
-		if err := os.MkdirAll(c.String("output"), 0755); err != nil {
+		if err := os.MkdirAll(c.String("output"), 0o755); err != nil {
 			return err
 		}
 
@@ -323,7 +330,7 @@ var newGen = &cli.Command{
 			Targets:    strings.Join(c.StringSlice("target"), ";"),
 		}
 
-		if err := os.Mkdir(name, 0755); err != nil {
+		if err := os.Mkdir(name, 0o755); err != nil {
 			return err
 		}
 
@@ -339,7 +346,7 @@ var newGen = &cli.Command{
 			createPath := strings.TrimPrefix(path, "scaffold/")
 			createPath = strings.ReplaceAll(createPath, "NAME", name)
 			if d.IsDir() {
-				return os.Mkdir(filepath.Join(name, createPath), 0755)
+				return os.Mkdir(filepath.Join(name, createPath), 0o755)
 			}
 
 			b, err := scaffoldFiles.ReadFile(path)
@@ -385,7 +392,7 @@ var newGen = &cli.Command{
 		fmt.Println(name, "successfully created.")
 		fmt.Println()
 		fmt.Println("Now, cd into", name, "and run the following commands")
-		fmt.Println("  go get -u ./...")
+		fmt.Println("  go mod tidy")
 		fmt.Println("  make generate")
 		return nil
 	},

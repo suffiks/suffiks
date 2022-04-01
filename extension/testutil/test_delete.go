@@ -14,9 +14,11 @@ import (
 )
 
 type DeleteTest struct {
-	Name              string
-	Existing          []runtime.Object
-	Object            base.Object
+	Name string
+	// Existing is the list of objects that should exist before the test is run.
+	Existing []runtime.Object
+	Object   base.Object
+	// Expected is the list of expected resources after the test case.
 	ExpectedRemaining []runtime.Object
 	ExpectedDeleted   []Deleted
 	ErrCheck          func(t *testing.T, err error)

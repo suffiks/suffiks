@@ -4,3 +4,6 @@ import "embed"
 
 //go:embed config/crd/bases/suffiks.com_applications.yaml config/crd/bases/suffiks.com_works.yaml
 var CRDFiles embed.FS
+
+//go:embed docs
+var DocFiles embed.FS

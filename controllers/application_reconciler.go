@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	jsonpatch "github.com/evanphx/json-patch"
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	suffiksv1 "github.com/suffiks/suffiks/api/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"

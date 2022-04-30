@@ -5,7 +5,9 @@ title: Installation
 weight: 1
 ---
 
+!!!warning
 As the platform is still in development, the installation process is not yet fully tested, but using helm should be possible.
+!!!
 
 ## Requirements
 

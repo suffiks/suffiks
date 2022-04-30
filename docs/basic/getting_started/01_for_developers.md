@@ -9,7 +9,7 @@ weight: 1
 
 Suffiks is a platform that lets you create and manage your applications and jobs in a simple and easy way.
 
-!!! info
+!!! info Customized for each cluster
 The features available in the platform vary among clusters, so it's strongly recommended to read the documentation provided by each cluster.
 !!!
 

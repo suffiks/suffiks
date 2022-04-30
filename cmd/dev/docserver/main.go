@@ -11,13 +11,11 @@ import (
 )
 
 func main() {
+	controller := docparser.NewController()
+	controller.AddFS("_suffiks", os.DirFS("./docs"))
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		categories, err := docparser.Parse(os.DirFS("./docs"))
-		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(err.Error()))
-			return
-		}
+		categories := controller.GetAll()
 
 		w.Header().Add("content-type", "application/json")
 		json.NewEncoder(w).Encode(categories)

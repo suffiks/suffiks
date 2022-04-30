@@ -12,12 +12,13 @@ func (p PageBody) MarshalJSON() ([]byte, error) {
 }
 
 type Page struct {
-	Category string   `yaml:"category" json:"category"`
-	Group    string   `yaml:"group" json:"group"`
-	Title    string   `yaml:"title" json:"title"`
-	Weight   int      `yaml:"weight" json:"weight"`
-	Slug     string   `yaml:"slug" json:"slug"`
-	Body     PageBody `json:"body"`
+	Category string    `yaml:"category" json:"category"`
+	Group    string    `yaml:"group" json:"group"`
+	Title    string    `yaml:"title" json:"title"`
+	Weight   int       `yaml:"weight" json:"weight"`
+	Slug     string    `yaml:"slug" json:"slug"`
+	Body     PageBody  `json:"body"`
+	Document *Document `json:"document"`
 }
 
 type Pages []*Page

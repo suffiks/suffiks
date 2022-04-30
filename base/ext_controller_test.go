@@ -506,6 +506,10 @@ func (m *mockGRPCClient) Validate(ctx context.Context, in *protogen.ValidationRe
 	return m.validationResponse, m.responseError
 }
 
+func (m *mockGRPCClient) Documentation(ctx context.Context, in *protogen.DocumentationRequest, opts ...grpc.CallOption) (*protogen.DocumentationResponse, error) {
+	return nil, nil
+}
+
 type mockStreamClient struct {
 	grpc.ClientStream
 

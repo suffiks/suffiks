@@ -22,6 +22,7 @@ type ExtensionClient interface {
 	Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_DeleteClient, error)
 	Default(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DefaultResponse, error)
 	Validate(ctx context.Context, in *ValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error)
+	Documentation(ctx context.Context, in *DocumentationRequest, opts ...grpc.CallOption) (*DocumentationResponse, error)
 }
 
 type extensionClient struct {
@@ -114,6 +115,15 @@ func (c *extensionClient) Validate(ctx context.Context, in *ValidationRequest, o
 	return out, nil
 }
 
+func (c *extensionClient) Documentation(ctx context.Context, in *DocumentationRequest, opts ...grpc.CallOption) (*DocumentationResponse, error) {
+	out := new(DocumentationResponse)
+	err := c.cc.Invoke(ctx, "/Extension/Documentation", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExtensionServer is the server API for Extension service.
 // All implementations must embed UnimplementedExtensionServer
 // for forward compatibility
@@ -122,6 +132,7 @@ type ExtensionServer interface {
 	Delete(*SyncRequest, Extension_DeleteServer) error
 	Default(context.Context, *SyncRequest) (*DefaultResponse, error)
 	Validate(context.Context, *ValidationRequest) (*ValidationResponse, error)
+	Documentation(context.Context, *DocumentationRequest) (*DocumentationResponse, error)
 	mustEmbedUnimplementedExtensionServer()
 }
 
@@ -140,6 +151,9 @@ func (UnimplementedExtensionServer) Default(context.Context, *SyncRequest) (*Def
 }
 func (UnimplementedExtensionServer) Validate(context.Context, *ValidationRequest) (*ValidationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Validate not implemented")
+}
+func (UnimplementedExtensionServer) Documentation(context.Context, *DocumentationRequest) (*DocumentationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Documentation not implemented")
 }
 func (UnimplementedExtensionServer) mustEmbedUnimplementedExtensionServer() {}
 
@@ -232,6 +246,24 @@ func _Extension_Validate_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Extension_Documentation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DocumentationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExtensionServer).Documentation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Extension/Documentation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExtensionServer).Documentation(ctx, req.(*DocumentationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Extension_ServiceDesc is the grpc.ServiceDesc for Extension service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -246,6 +278,10 @@ var Extension_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Validate",
 			Handler:    _Extension_Validate_Handler,
+		},
+		{
+			MethodName: "Documentation",
+			Handler:    _Extension_Documentation_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

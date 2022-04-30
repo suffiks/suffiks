@@ -389,6 +389,8 @@ var newGen = &cli.Command{
 			return err
 		}
 
+		_ = os.Mkdir(filepath.Join(name, "docs"), 0o755)
+
 		fmt.Println(name, "successfully created.")
 		fmt.Println()
 		fmt.Println("Now, cd into", name, "and run the following commands")

@@ -72,6 +72,6 @@ func (t *Suffiks[Ext]) init() {
 
 	t.listener = bufconn.Listen(1024 * 1024)
 	t.grpcServer = grpc.NewServer()
-	protogen.RegisterExtensionServer(t.grpcServer, extension.NewServer(t.extension))
+	protogen.RegisterExtensionServer(t.grpcServer, extension.NewServer(t.extension, nil))
 	go t.grpcServer.Serve(t.listener)
 }

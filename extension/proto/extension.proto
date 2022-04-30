@@ -15,6 +15,7 @@ service Extension {
   rpc Delete(SyncRequest) returns (stream Response) {}
   rpc Default(SyncRequest) returns (DefaultResponse) {}
   rpc Validate(ValidationRequest) returns (ValidationResponse) {}
+  rpc Documentation(DocumentationRequest) returns (DocumentationResponse) {}
 }
 
 message ValidationRequest {
@@ -75,3 +76,7 @@ message Response {
     bytes mergePatch = 5;
   }
 }
+
+message DocumentationRequest {}
+
+message DocumentationResponse { repeated bytes pages = 1; }

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks/base/tracing"
@@ -19,15 +21,63 @@ import (
 type server[T any] struct {
 	protogen.UnimplementedExtensionServer
 
-	ext  Extension[T]
-	vext ValidatableExtension[T]
-	dext DefaultableExtension[T]
+	ext   Extension[T]
+	vext  ValidatableExtension[T]
+	dext  DefaultableExtension[T]
+	pages [][]byte
 }
 
 var _ protogen.ExtensionServer = &server[any]{}
 
+func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc fs.FS) error {
+	lis, err := net.Listen("tcp", config.getListenAddress())
+	if err != nil {
+		return fmt.Errorf("failed to listen: %w", err)
+	}
+
+	opts := []grpc.ServerOption{}
+	if config.getTracing().Enabled() {
+		opts = append(
+			opts,
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+		)
+
+		if err := tracing.Provider(ctx, logr.Discard(), config.getTracing()); err != nil {
+			return err
+		}
+	}
+	s := grpc.NewServer(opts...)
+
+	var pages [][]byte
+	fs.WalkDir(doc, "", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || strings.HasSuffix(path, ".md") {
+			return err
+		}
+
+		page, err := fs.ReadFile(doc, path)
+		if err != nil {
+			return err
+		}
+
+		pages = append(pages, page)
+		return nil
+	})
+
+	protogen.RegisterExtensionServer(s, NewServer(ext, pages))
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return s.Serve(lis) })
+	g.Go(func() error {
+		<-ctx.Done()
+		s.GracefulStop()
+		return nil
+	})
+
+	return g.Wait()
+}
+
 func (s *server[T]) Sync(req *protogen.SyncRequest, e protogen.Extension_SyncServer) error {
-	fmt.Println("Run Sync")
 	rw := &ResponseWriter{w: e}
 
 	var obj T
@@ -47,7 +97,6 @@ func (s *server[T]) Sync(req *protogen.SyncRequest, e protogen.Extension_SyncSer
 }
 
 func (s *server[T]) Delete(req *protogen.SyncRequest, e protogen.Extension_DeleteServer) error {
-	fmt.Println("Run Delete")
 	var obj T
 	if len(req.GetSpec()) > 0 {
 		if err := json.Unmarshal(req.GetSpec(), &obj); err != nil {
@@ -64,7 +113,6 @@ func (s *server[T]) Delete(req *protogen.SyncRequest, e protogen.Extension_Delet
 }
 
 func (s *server[T]) Default(ctx context.Context, req *protogen.SyncRequest) (*protogen.DefaultResponse, error) {
-	fmt.Println("Run Default")
 	if s.dext == nil {
 		return nil, nil
 	}
@@ -96,7 +144,6 @@ func (s *server[T]) Default(ctx context.Context, req *protogen.SyncRequest) (*pr
 }
 
 func (s *server[T]) Validate(ctx context.Context, req *protogen.ValidationRequest) (*protogen.ValidationResponse, error) {
-	fmt.Println("Run Validate")
 	if s.vext == nil {
 		return &protogen.ValidationResponse{}, nil
 	}
@@ -137,40 +184,13 @@ func (s *server[T]) Validate(ctx context.Context, req *protogen.ValidationReques
 	return resp, nil
 }
 
-func Serve[T any](ctx context.Context, config Config, ext Extension[T]) error {
-	lis, err := net.Listen("tcp", config.getListenAddress())
-	if err != nil {
-		return fmt.Errorf("failed to listen: %w", err)
-	}
-
-	opts := []grpc.ServerOption{}
-	if config.getTracing().Enabled() {
-		opts = append(
-			opts,
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
-		)
-
-		if err := tracing.Provider(ctx, logr.Discard(), config.getTracing()); err != nil {
-			return err
-		}
-	}
-	s := grpc.NewServer(opts...)
-
-	protogen.RegisterExtensionServer(s, NewServer(ext))
-
-	g, ctx := errgroup.WithContext(ctx)
-	g.Go(func() error { return s.Serve(lis) })
-	g.Go(func() error {
-		<-ctx.Done()
-		s.GracefulStop()
-		return nil
-	})
-
-	return g.Wait()
+func (s *server[T]) Documentation(context.Context, *protogen.DocumentationRequest) (*protogen.DocumentationResponse, error) {
+	return &protogen.DocumentationResponse{
+		Pages: s.pages,
+	}, nil
 }
 
-func NewServer[T any](ext Extension[T]) protogen.ExtensionServer {
+func NewServer[T any](ext Extension[T], docPages [][]byte) protogen.ExtensionServer {
 	vext, _ := ext.(ValidatableExtension[T])
 	dext, _ := ext.(DefaultableExtension[T])
 	return &server[T]{

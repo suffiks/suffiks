@@ -29,7 +29,12 @@ type server[T any] struct {
 
 var _ protogen.ExtensionServer = &server[any]{}
 
-func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc fs.FS) error {
+type Documentation struct {
+	FS   fs.FS
+	Root string
+}
+
+func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Documentation) error {
 	lis, err := net.Listen("tcp", config.getListenAddress())
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
@@ -50,19 +55,21 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc fs.F
 	s := grpc.NewServer(opts...)
 
 	var pages [][]byte
-	fs.WalkDir(doc, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || strings.HasSuffix(path, ".md") {
-			return err
-		}
+	if doc != nil {
+		fs.WalkDir(doc.FS, doc.Root, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
+				return err
+			}
 
-		page, err := fs.ReadFile(doc, path)
-		if err != nil {
-			return err
-		}
+			page, err := fs.ReadFile(doc.FS, path)
+			if err != nil {
+				return err
+			}
 
-		pages = append(pages, page)
-		return nil
-	})
+			pages = append(pages, page)
+			return nil
+		})
+	}
 
 	protogen.RegisterExtensionServer(s, NewServer(ext, pages))
 

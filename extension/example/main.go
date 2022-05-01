@@ -14,7 +14,11 @@ var docFiles embed.FS
 
 func main() {
 	config := extension.ConfigSpec{}
-	if err := extension.Serve[*controller.Ingresses](context.Background(), config, &controller.IngressExtension{}, docFiles); err != nil {
+	doc := &extension.Documentation{
+		FS:   docFiles,
+		Root: "docs",
+	}
+	if err := extension.Serve[*controller.Ingresses](context.Background(), config, &controller.IngressExtension{}, doc); err != nil {
 		log.Fatal(err)
 	}
 }

@@ -6,18 +6,6 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-type Category struct {
-	Name   string   `json:"name"`
-	Slug   string   `json:"slug"`
-	Groups []*Group `json:"groups"`
-}
-
-type Group struct {
-	Name  string `json:"name"`
-	Slug  string `json:"slug"`
-	Pages Pages  `json:"pages"`
-}
-
 func convert(n ast.Node, source []byte) (*Document, error) {
 	doc := &Document{
 		TokenBase: TokenBase{

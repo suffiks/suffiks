@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"net/http"
 	"os"
@@ -191,6 +192,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	go documentationServer(ctx, ctrlConfig.DocumentationAddress, crdMgr, setupLog)
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
@@ -205,9 +207,15 @@ func main() {
 
 func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionManager, log logr.Logger) {
 	ctrl := docparser.NewController()
+	ctrl.AddFS("_suffiks", suffiks.DocFiles)
 	go updateDocs(ctx, ctrl, mgr, log)
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		cats := ctrl.GetAll()
+		json.NewEncoder(w).Encode(cats)
+	})
 
 	if addr == "" {
 		addr = ":8084"

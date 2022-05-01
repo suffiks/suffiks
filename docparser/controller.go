@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -65,6 +66,13 @@ func (c *Controller) GetAll() []*Category {
 		}
 	}
 
+	for _, c := range categories {
+		sort.Sort(c.Groups)
+		for _, g := range c.Groups {
+			sort.Sort(g.Pages)
+		}
+	}
+
 	return categories
 }
 
@@ -108,13 +116,17 @@ func (c *Controller) Parse(name string, pages [][]byte) error {
 			res = append(res, cat)
 		}
 
-		group, ok := groups[cat][page.Group]
+		groupName, weight := parseGroupName(page.Group)
+		group, ok := groups[cat][groupName]
 		if !ok {
-			group = &Group{Name: page.Group}
+			group = &Group{Name: groupName, Weight: weight}
 			if _, ok := groups[cat]; !ok {
 				groups[cat] = map[string]*Group{}
 			}
-			groups[cat][page.Group] = group
+			groups[cat][groupName] = group
+			if group.Weight < 0 {
+				group.Weight = weight
+			}
 			cat.Groups = append(cat.Groups, group)
 		}
 
@@ -143,6 +155,19 @@ func (c *Controller) Parse(name string, pages [][]byte) error {
 
 	c.Store(name, res)
 	return nil
+}
+
+var regGroupWeight = regexp.MustCompile(`^(.*?)(\[(\d+)])$`)
+
+func parseGroupName(gn string) (name string, weight int) {
+	sub := regGroupWeight.FindAllStringSubmatch(gn, 1)
+
+	if len(sub) > 0 {
+		weight, _ := strconv.Atoi(sub[0][3])
+		return strings.TrimSpace(sub[0][1]), weight
+	}
+
+	return gn, -1
 }
 
 var (

@@ -34,6 +34,10 @@ spec:
           name: manager
           securityContext:
             allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8084
+              name: doc
+              protocol: TCP
           livenessProbe:
             httpGet:
               path: /healthz
@@ -55,3 +59,18 @@ spec:
               memory: 20Mi
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: controller-manager-doc-service
+  namespace: system
+spec:
+  ports:
+    - name: http
+      port: 8084
+      targetPort: doc
+  selector:
+    control-plane: controller-manager

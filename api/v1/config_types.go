@@ -35,6 +35,10 @@ type ProjectConfig struct {
 	// Disable webhooks.
 	// +optional
 	WebhooksDisabled bool `json:"webhooksDisabled"`
+
+	// Listening address for the documentation server.
+	// +optional
+	DocumentationAddress string `json:"documentationAddress,omitempty"`
 }
 
 func init() {

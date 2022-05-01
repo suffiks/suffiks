@@ -5,16 +5,20 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks"
 	suffiksv1 "github.com/suffiks/suffiks/api/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/controllers"
+	"github.com/suffiks/suffiks/docparser"
+	"github.com/suffiks/suffiks/extension/protogen"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -74,7 +78,7 @@ func main() {
 	if configFile != "" {
 		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
 		if err != nil {
-			setupLog.Error(err, "unable to load configuration")
+			setupLog.Error(err, "unable to load the config file")
 			os.Exit(1)
 		}
 	}
@@ -196,5 +200,51 @@ func main() {
 	if err := tracing.Shutdown(context.Background()); err != nil {
 		setupLog.Error(err, "problem shutting down tracer provider")
 		os.Exit(1)
+	}
+}
+
+func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionManager, log logr.Logger) {
+	ctrl := docparser.NewController()
+	go updateDocs(ctx, ctrl, mgr, log)
+
+	mux := http.NewServeMux()
+
+	if addr == "" {
+		addr = ":8084"
+	}
+
+	server := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
+	go func() {
+		<-ctx.Done()
+		if err := server.Shutdown(ctx); err != nil {
+			log.Error(err, "problem shutting down server")
+		}
+	}()
+
+	log.V(3).Info("serving documentation", "addr", addr)
+	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		log.Error(err, "problem running server")
+	}
+}
+
+func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *base.ExtensionManager, log logr.Logger) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Minute * 3):
+			for _, ext := range mgr.All() {
+				pages, err := ext.Client().Documentation(ctx, &protogen.DocumentationRequest{})
+				if err != nil {
+					log.V(5).Error(err, "unable to get documentation")
+					continue
+				}
+				ctrl.Parse(ext.Name, pages.GetPages())
+			}
+		}
 	}
 }

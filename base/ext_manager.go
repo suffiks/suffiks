@@ -181,12 +181,33 @@ func (c *ExtensionManager) ExtensionsFor(kind string) []extension {
 	return cp
 }
 
+func (c *ExtensionManager) All() []extension {
+	c.rwlock.RLock()
+	defer c.rwlock.RUnlock()
+
+	cp := []extension{}
+	added := map[string]struct{}{}
+	for _, v := range c.extensions {
+		if _, ok := added[v.Name]; ok {
+			continue
+		}
+		added[v.Name] = struct{}{}
+		cp = append(cp, v)
+	}
+
+	return cp
+}
+
 type extension struct {
 	suffiksv1.Extension
 
 	sourceSpec []string
 	client     protogen.ExtensionClient
 	gclient    *grpc.ClientConn
+}
+
+func (e *extension) Client() protogen.ExtensionClient {
+	return e.client
 }
 
 type properties struct {

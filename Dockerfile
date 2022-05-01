@@ -7,14 +7,16 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+RUN go mod download && go build std
 
 # Copy the go source
-COPY crd.go crd.go
+COPY embeds.go embeds.go
 COPY cmd/suffiks cmd/suffiks
 COPY api/ api/
 COPY base/ base/
 COPY controllers/ controllers/
+COPY docparser/ docparser/
+COPY docs/ docs/
 COPY extension/ extension/
 COPY config/crd/bases/ config/crd/bases/
 # Build

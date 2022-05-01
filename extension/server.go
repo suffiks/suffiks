@@ -50,7 +50,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc fs.F
 	s := grpc.NewServer(opts...)
 
 	var pages [][]byte
-	fs.WalkDir(doc, "", func(path string, d fs.DirEntry, err error) error {
+	fs.WalkDir(doc, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || strings.HasSuffix(path, ".md") {
 			return err
 		}

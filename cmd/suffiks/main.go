@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -206,6 +207,7 @@ func main() {
 }
 
 func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionManager, log logr.Logger) {
+	fmt.Println("################ STARTING DOCUMENTATION SERVER ################")
 	ctrl := docparser.NewController()
 	ctrl.AddFS("_suffiks", suffiks.DocFiles)
 	go updateDocs(ctx, ctrl, mgr, log)
@@ -233,7 +235,7 @@ func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionMa
 		}
 	}()
 
-	log.V(3).Info("serving documentation", "addr", addr)
+	log.Info("serving documentation", "addr", addr)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Error(err, "problem running server")
 	}
@@ -241,18 +243,21 @@ func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionMa
 
 func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *base.ExtensionManager, log logr.Logger) {
 	for {
+		for _, ext := range mgr.All() {
+			fmt.Println("Start update docs for", ext.GetName())
+			pages, err := ext.Client().Documentation(ctx, &protogen.DocumentationRequest{})
+			if err != nil {
+				log.V(5).Error(err, "unable to get documentation")
+				continue
+			}
+
+			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.GetName())
+			ctrl.Parse(ext.Name, pages.GetPages())
+		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-time.After(time.Minute * 3):
-			for _, ext := range mgr.All() {
-				pages, err := ext.Client().Documentation(ctx, &protogen.DocumentationRequest{})
-				if err != nil {
-					log.V(5).Error(err, "unable to get documentation")
-					continue
-				}
-				ctrl.Parse(ext.Name, pages.GetPages())
-			}
 		}
 	}
 }

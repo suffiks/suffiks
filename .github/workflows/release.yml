@@ -24,6 +24,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18.1
+
+      - name: Tests
+        run: go test ./...
+
+
       # ARM64 is really slow with buildx on GHA, we might want to build it using the go
       # tooling and then just copy the resulting binaries to the release container images.
       # https://github.com/docker/setup-qemu-action

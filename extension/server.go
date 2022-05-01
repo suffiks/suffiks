@@ -201,9 +201,10 @@ func NewServer[T any](ext Extension[T], docPages [][]byte) protogen.ExtensionSer
 	vext, _ := ext.(ValidatableExtension[T])
 	dext, _ := ext.(DefaultableExtension[T])
 	return &server[T]{
-		ext:  ext,
-		vext: vext,
-		dext: dext,
+		ext:   ext,
+		vext:  vext,
+		dext:  dext,
+		pages: docPages,
 	}
 }
 

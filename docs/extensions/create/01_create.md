@@ -11,7 +11,7 @@ Although the platform has no requirements on the language or technology used to 
 
 ## Install `extgen`
 
-Install Go 1.18 or later by following [the official documentation](https://go.dev/doc/install).
+Install Go 1.19 or later by following [the official documentation](https://go.dev/doc/install).
 
 Install `extgen` by running the following command:
 

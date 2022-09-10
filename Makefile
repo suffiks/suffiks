@@ -1,6 +1,7 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/suffiks/suffiks:latest
+KIND_CLUSTER ?= kind
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -69,7 +70,7 @@ docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
 
 kind: docker-build
-	kind load docker-image ${IMG}
+	kind load docker-image --name ${KIND_CLUSTER} ${IMG}
 
 ##@ Deployment
 
@@ -116,8 +117,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= a0e33b1e3a0f04a6df92a37a40dd527169d84a6e
-ENVTEST_VERSION ?= latest
+CONTROLLER_TOOLS_VERSION ?= v0.9.2
+ENVTEST_VERSION ?= 1.25.0
 
 KUSTOMIZE_BUNDLE = kustomize_$(KUSTOMIZE_VERSION)_$(shell go env GOOS)_$(shell go env GOARCH).tar.gz
 KUSTOMIZE_URL = https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F$(KUSTOMIZE_VERSION)/$(KUSTOMIZE_BUNDLE)
@@ -126,6 +127,7 @@ kustomize: $(KUSTOMIZE)
 $(KUSTOMIZE): ## Download kustomize locally if necessary.
 	curl -sLO $(KUSTOMIZE_URL)
 	tar xf $(KUSTOMIZE_BUNDLE) --directory $(LOCALBIN)
+	rm $(KUSTOMIZE_BUNDLE)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN)

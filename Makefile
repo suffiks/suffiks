@@ -138,3 +138,12 @@ $(CONTROLLER_GEN): ## Download controller-gen locally if necessary.
 envtest: $(ENVTEST)
 $(ENVTEST): ## Download envtest-setup locally if necessary.
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION)
+
+.PHONY: clientset
+clientset: TMPDIR := $(shell mktemp -d)
+clientset: ## Generate clientset
+	go run k8s.io/code-generator/cmd/client-gen \
+		--input-base=github.com/suffiks/suffiks/api --input-dirs=. --input="v1" \
+		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR)
+	cp -r $(TMPDIR)/github.com/suffiks/suffiks/pkg .
+	rm -rf $(TMPDIR)

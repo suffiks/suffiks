@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // package v1 contains API Schema definitions for the Suffiks v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=suffiks.com
+// +kubebuilder:object:generate=true
+// +groupName=suffiks.com
 package v1
 
 import (

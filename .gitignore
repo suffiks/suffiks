@@ -27,4 +27,6 @@ cmd/extgen/extgen
 cmd/suffiks/suffiks
 scratchpad
 
+
 .vscode
+config/crd/bases/_.yaml

@@ -10,7 +10,7 @@ resources:
     domain: suffiks.com
     group: suffiks
     kind: Extension
-    path: github.com/suffiks/suffiks/api/v1
+    path: github.com/suffiks/suffiks/apis/suffiks/v1
     version: v1
     webhooks:
       validation: true

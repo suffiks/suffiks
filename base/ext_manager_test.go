@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	suffiksv1 "github.com/suffiks/suffiks/api/v1"
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"

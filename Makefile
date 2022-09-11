@@ -143,7 +143,12 @@ $(ENVTEST): ## Download envtest-setup locally if necessary.
 clientset: TMPDIR := $(shell mktemp -d)
 clientset: ## Generate clientset
 	go run k8s.io/code-generator/cmd/client-gen \
-		--input-base=github.com/suffiks/suffiks/api --input-dirs=. --input="v1" \
-		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR)
+		--clientset-name versioned \
+		--input-base=github.com/suffiks/suffiks/apis --input-dirs=. --input="suffiks/v1" \
+		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR) \
+		--go-header-file hack/boilerplate.go.txt
 	cp -r $(TMPDIR)/github.com/suffiks/suffiks/pkg .
+# Application is special, so reference the base package
+	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/application.go
+	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake/fake_application.go
 	rm -rf $(TMPDIR)

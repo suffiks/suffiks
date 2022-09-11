@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/mitchellh/hashstructure/v2"
-	suffiksv1 "github.com/suffiks/suffiks/api/v1"
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )

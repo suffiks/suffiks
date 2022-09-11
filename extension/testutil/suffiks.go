@@ -6,7 +6,7 @@ import (
 	"net"
 
 	"github.com/suffiks/suffiks"
-	suffiksv1 "github.com/suffiks/suffiks/api/v1"
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/protogen"

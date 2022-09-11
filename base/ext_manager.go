@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
-	suffiksv1 "github.com/suffiks/suffiks/api/v1"
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/base/runtime"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"google.golang.org/grpc"

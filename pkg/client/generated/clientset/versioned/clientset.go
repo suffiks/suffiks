@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	suffiksv1 "github.com/suffiks/suffiks/pkg/client/clientset_generated/versioned/typed/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/typed/suffiks/v1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

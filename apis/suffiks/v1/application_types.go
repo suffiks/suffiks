@@ -3,7 +3,13 @@ package v1
 // Important: Run "make" to regenerate code after modifying this file
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
+	"github.com/mitchellh/hashstructure/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 type EnvVars []EnvVar
@@ -38,6 +44,8 @@ type EnvFrom struct {
 
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
+	runtime.RawExtension `json:",inline"`
+
 	// The port number which is exposed by the container and should receive traffic.
 	Port int `json:"port,omitempty"`
 
@@ -75,6 +83,7 @@ type ApplicationStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=app
+//+kubebuilder:object:root=true
 // +genclient
 
 // Application is the base Schema for the application API
@@ -86,9 +95,54 @@ type Application struct {
 	Status ApplicationStatus `json:"status,omitempty"`
 }
 
+//+kubebuilder:object:root=true
+
 // ExtensionList contains a list of Extension
 type ApplicationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Application `json:"items"`
+}
+
+// Well known
+
+func (a *Application) GetSpec() []byte {
+	if a == nil {
+		return nil
+	}
+
+	b, _ := json.Marshal(a.Spec)
+
+	fmt.Println("RESULTING SPEC", string(b))
+	return b
+}
+
+func (a *Application) WellKnownSpec() (ApplicationSpec, error) {
+	if a == nil {
+		return ApplicationSpec{}, nil
+	}
+
+	return a.Spec, nil
+}
+
+func (a *Application) Hash() (string, error) {
+	if a == nil {
+		return "", fmt.Errorf("unable to hash nil application")
+	}
+
+	v := struct {
+		Spec   ApplicationSpec
+		Labels map[string]string
+	}{
+		Spec:   a.Spec,
+		Labels: a.Labels,
+	}
+	h, err := hashstructure.Hash(v, hashstructure.FormatV2, &hashstructure.HashOptions{
+		IgnoreZeroValue: true,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return strconv.FormatUint(h, 16), nil
 }

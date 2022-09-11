@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/suffiks/suffiks/base"
+	base "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/testutil"
 	netv1 "k8s.io/api/networking/v1"
@@ -25,7 +25,7 @@ func TestIntegration(t *testing.T) {
 			Name:      "some-app",
 			Namespace: "mynamespace",
 		},
-		Spec: testutil.AppSpec(map[string]any{
+		Spec: testutil.AppSpec(nil, map[string]any{
 			"ingresses": []map[string]any{
 				{
 					"host": "mydomain.org",
@@ -91,7 +91,7 @@ func TestIntegration(t *testing.T) {
 		},
 	}
 
-	f, err := os.OpenFile("../config/crd/ingresses.yaml", os.O_RDONLY, 0644)
+	f, err := os.OpenFile("../config/crd/ingresses.yaml", os.O_RDONLY, 0o644)
 	if err != nil {
 		t.Fatal(err)
 	}

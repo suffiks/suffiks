@@ -60,6 +60,8 @@ func (i *IntegrationTester[Ext]) Run(t *testing.T, tests ...TestCase) {
 }
 
 func (i *IntegrationTester[Ext]) runTest(t *testing.T, client *fake.Clientset, tr *Suffiks[Ext], test TestCase) {
+	t.Helper()
+
 	test.runTest(t, tr.ctrl, client)
 }
 
@@ -96,11 +98,11 @@ func getName(obj runtime.Object) string {
 func fixObject(t *testing.T, obj base.Object) base.Object {
 	if obj.GetObjectKind().GroupVersionKind().Kind == "" {
 		switch v := obj.(type) {
-		case *base.Application:
+		case *suffiksv1.Application:
 			v.Kind = "Application"
 			v.APIVersion = suffiksv1.GroupVersion.Version
 			return v
-		case *base.Work:
+		case *suffiksv1.Work:
 			v.Kind = "Work"
 			v.APIVersion = suffiksv1.GroupVersion.Version
 			return v

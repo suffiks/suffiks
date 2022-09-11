@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-var _ Reconciler[*base.Application] = &AppReconciler{}
+var _ Reconciler[*suffiksv1.Application] = &AppReconciler{}
 
 // When changing the lines below, run make
 //+kubebuilder:rbac:groups=suffiks.com,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -39,9 +39,9 @@ type AppReconciler struct {
 	Client client.Client
 }
 
-func (a *AppReconciler) NewObject() *base.Application { return &base.Application{} }
+func (a *AppReconciler) NewObject() *suffiksv1.Application { return &suffiksv1.Application{} }
 
-func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *base.Application, changeset *base.Changeset) error {
+func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Application, changeset *base.Changeset) error {
 	ctx, span := tracing.Start(ctx, "AppReconciler.CreateOrUpdate")
 	defer span.End()
 
@@ -118,7 +118,7 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *base.Applicatio
 	return nil
 }
 
-func (a *AppReconciler) UpdateStatus(ctx context.Context, app *base.Application, extensions []string) error {
+func (a *AppReconciler) UpdateStatus(ctx context.Context, app *suffiksv1.Application, extensions []string) error {
 	hash, err := app.Hash()
 	if err != nil {
 		return fmt.Errorf("error hashing application: %w", err)
@@ -135,7 +135,7 @@ func (a *AppReconciler) UpdateStatus(ctx context.Context, app *base.Application,
 	return nil
 }
 
-func (a *AppReconciler) IsModified(ctx context.Context, app *base.Application) (bool, error) {
+func (a *AppReconciler) IsModified(ctx context.Context, app *suffiksv1.Application) (bool, error) {
 	h, err := app.Hash()
 	if err != nil {
 		return false, err
@@ -160,7 +160,7 @@ func (a *AppReconciler) IsModified(ctx context.Context, app *base.Application) (
 	return true, nil
 }
 
-func (a *AppReconciler) Delete(ctx context.Context, app *base.Application) error {
+func (a *AppReconciler) Delete(ctx context.Context, app *suffiksv1.Application) error {
 	err := a.Client.Delete(ctx, &appsv1.Deployment{ObjectMeta: a.objectMeta(app)})
 	if err != nil && !errors.IsNotFound(err) {
 		return err
@@ -172,7 +172,7 @@ func (a *AppReconciler) Delete(ctx context.Context, app *base.Application) error
 	return nil
 }
 
-func (a *AppReconciler) Extensions(app *base.Application) []string {
+func (a *AppReconciler) Extensions(app *suffiksv1.Application) []string {
 	return app.Status.Extensions
 }
 
@@ -183,7 +183,7 @@ func (a *AppReconciler) Owns() []client.Object {
 	}
 }
 
-func (a *AppReconciler) newDeployment(app *base.Application, spec suffiksv1.ApplicationSpec) *appsv1.Deployment {
+func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1.ApplicationSpec) *appsv1.Deployment {
 	labels := map[string]string{
 		"app": app.Name,
 	}
@@ -219,7 +219,7 @@ func (a *AppReconciler) newDeployment(app *base.Application, spec suffiksv1.Appl
 	}
 }
 
-func (a *AppReconciler) objectMeta(app *base.Application) metav1.ObjectMeta {
+func (a *AppReconciler) objectMeta(app *suffiksv1.Application) metav1.ObjectMeta {
 	return metav1.ObjectMeta{
 		Name:      app.Name,
 		Namespace: app.Namespace,

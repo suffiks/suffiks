@@ -128,7 +128,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	appRec := &controllers.ReconcilerWrapper[*base.Application]{
+	appRec := &controllers.ReconcilerWrapper[*suffiksv1.Application]{
 		Client: mgr.GetClient(),
 		Child: &controllers.AppReconciler{
 			Scheme: mgr.GetScheme(),
@@ -141,18 +141,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	workRec := &controllers.ReconcilerWrapper[*base.Work]{
-		Client: mgr.GetClient(),
-		Child: &controllers.JobReconciler{
-			Scheme: mgr.GetScheme(),
-			Client: mgr.GetClient(),
-		},
-		CRDController: extController,
-	}
-	if err = workRec.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Application")
-		os.Exit(1)
-	}
+	// workRec := &controllers.ReconcilerWrapper[*base.Work]{
+	// 	Client: mgr.GetClient(),
+	// 	Child: &controllers.JobReconciler{
+	// 		Scheme: mgr.GetScheme(),
+	// 		Client: mgr.GetClient(),
+	// 	},
+	// 	CRDController: extController,
+	// }
+	// if err = workRec.SetupWithManager(mgr); err != nil {
+	// 	setupLog.Error(err, "unable to create controller", "controller", "Application")
+	// 	os.Exit(1)
+	// }
 
 	if !ctrlConfig.WebhooksDisabled {
 		if err = (&suffiksv1.Extension{}).SetupWebhookWithManager(mgr); err != nil {
@@ -165,10 +165,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err := workRec.SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Work")
-			os.Exit(1)
-		}
+		// if err := workRec.SetupWebhookWithManager(mgr); err != nil {
+		// 	setupLog.Error(err, "unable to create webhook", "webhook", "Work")
+		// 	os.Exit(1)
+		// }
 	}
 
 	//+kubebuilder:scaffold:builder

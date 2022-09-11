@@ -3,6 +3,8 @@ package v1
 // Important: Run "make" to regenerate code after modifying this file
 
 import (
+	"encoding/json"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -55,4 +57,13 @@ type Work struct {
 
 	Spec   WorkSpec   `json:"spec,omitempty"`
 	Status WorkStatus `json:"status,omitempty"`
+}
+
+func (w *Work) GetSpec() []byte {
+	if w == nil {
+		return nil
+	}
+
+	b, _ := json.Marshal(w.Spec)
+	return b
 }

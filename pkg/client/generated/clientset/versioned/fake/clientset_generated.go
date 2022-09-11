@@ -3,9 +3,9 @@
 package fake
 
 import (
-	clientset "github.com/suffiks/suffiks/pkg/client/clientset_generated/versioned"
-	suffiksv1 "github.com/suffiks/suffiks/pkg/client/clientset_generated/versioned/typed/suffiks/v1"
-	fakesuffiksv1 "github.com/suffiks/suffiks/pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake"
+	clientset "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/typed/suffiks/v1"
+	fakesuffiksv1 "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/typed/suffiks/v1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"

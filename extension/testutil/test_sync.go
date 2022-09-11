@@ -25,6 +25,8 @@ type SyncTest struct {
 func (s SyncTest) name() string               { return s.Name }
 func (s SyncTest) existing() []runtime.Object { return s.Existing }
 func (s SyncTest) runTest(t *testing.T, ctrl *base.ExtensionController, client *fake.Clientset) {
+	t.Helper()
+
 	cs, err := ctrl.Sync(context.Background(), fixObject(t, s.Object))
 	if err != nil {
 		if s.ErrCheck == nil {

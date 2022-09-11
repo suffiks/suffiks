@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
@@ -18,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var _ admission.CustomValidator = &ReconcilerWrapper[*base.Application]{}
+var _ admission.CustomValidator = &ReconcilerWrapper[*suffiksv1.Application]{}
 
 func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.ValidationType, newObj, oldObj runtime.Object) error {
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind

@@ -3,26 +3,27 @@ package testutil
 import (
 	"encoding/json"
 
+	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func AppSpec(fields map[string]any) runtime.RawExtension {
-	root := map[string]any{
-		"image": "some-image",
-		"port":  8080,
-	}
-	for k, v := range fields {
-		root[k] = v
+func AppSpec(wellKnown *suffiksv1.ApplicationSpec, fields map[string]any) suffiksv1.ApplicationSpec {
+	if wellKnown == nil {
+		wellKnown = &suffiksv1.ApplicationSpec{
+			Image: "some-image",
+			Port:  8080,
+		}
 	}
 
 	re := runtime.RawExtension{}
 	var err error
 
-	re.Raw, err = json.Marshal(root)
-
+	re.Raw, err = json.Marshal(fields)
 	if err != nil {
 		panic(err)
 	}
 
-	return re
+	wellKnown.RawExtension = re
+
+	return *wellKnown
 }

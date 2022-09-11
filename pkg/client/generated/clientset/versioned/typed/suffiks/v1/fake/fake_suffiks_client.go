@@ -3,7 +3,7 @@
 package fake
 
 import (
-	v1 "github.com/suffiks/suffiks/pkg/client/clientset_generated/versioned/typed/suffiks/v1"
+	v1 "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/typed/suffiks/v1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )

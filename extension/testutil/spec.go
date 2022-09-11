@@ -1,10 +1,7 @@
 package testutil
 
 import (
-	"encoding/json"
-
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func AppSpec(wellKnown *suffiksv1.ApplicationSpec, fields map[string]any) suffiksv1.ApplicationSpec {
@@ -15,15 +12,6 @@ func AppSpec(wellKnown *suffiksv1.ApplicationSpec, fields map[string]any) suffik
 		}
 	}
 
-	re := runtime.RawExtension{}
-	var err error
-
-	re.Raw, err = json.Marshal(fields)
-	if err != nil {
-		panic(err)
-	}
-
-	wellKnown.RawExtension = re
-
+	wellKnown.Rest.Object = fields
 	return *wellKnown
 }

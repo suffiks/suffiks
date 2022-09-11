@@ -67,3 +67,7 @@ func (w *Work) GetSpec() []byte {
 	b, _ := json.Marshal(w.Spec)
 	return b
 }
+
+func init() {
+	// SchemeBuilder.Register(&Work{}, &WorkList{})
+}

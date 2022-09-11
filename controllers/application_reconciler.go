@@ -63,6 +63,8 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 
 	depl.Spec.Template.Annotations = mergeMaps(depl.Spec.Template.Annotations, depl.Annotations)
 
+	fmt.Println("SET PORT TO ", spec.Port)
+
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      app.Name,
@@ -100,6 +102,16 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 	} else {
 		span.SetAttributes(attribute.String("action", "create svc"))
 	}
+
+	b, _ := json.MarshalIndent(depl, "", "  ")
+	fmt.Println("New deploy")
+
+	fmt.Println("Environment", len(changeset.Environment))
+	fmt.Println("Labels", len(changeset.Labels))
+	fmt.Println("Annotations", len(changeset.Annotations))
+	fmt.Println("EnvFrom", len(changeset.EnvFrom))
+	fmt.Println("MergePatch", len(changeset.MergePatch))
+	fmt.Println(string(b))
 
 	if err := a.Client.Create(ctx, depl); err != nil {
 		if errors.IsAlreadyExists(err) {

@@ -160,7 +160,6 @@ func (s *server[T]) Validate(ctx context.Context, req *protogen.ValidationReques
 
 	sync := req.GetSync()
 	if sync != nil && len(sync.GetSpec()) > 0 {
-		fmt.Println(string(sync.GetSpec()))
 		if err := json.Unmarshal(sync.GetSpec(), newObject); err != nil {
 			return nil, fmt.Errorf("error unmarshaling newObject: %w", err)
 		}

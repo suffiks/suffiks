@@ -12,7 +12,7 @@ RUN go mod download && go build std
 # Copy the go source
 COPY embeds.go embeds.go
 COPY cmd/suffiks cmd/suffiks
-COPY api/ api/
+COPY apis/ apis/
 COPY base/ base/
 COPY controllers/ controllers/
 COPY docparser/ docparser/

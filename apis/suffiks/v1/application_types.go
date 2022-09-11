@@ -8,8 +8,9 @@ import (
 	"strconv"
 
 	"github.com/mitchellh/hashstructure/v2"
+	"github.com/perimeterx/marshmallow"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type EnvVars []EnvVar
@@ -44,8 +45,6 @@ type EnvFrom struct {
 
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
-	runtime.RawExtension `json:",inline"`
-
 	// The port number which is exposed by the container and should receive traffic.
 	Port int `json:"port,omitempty"`
 
@@ -67,6 +66,8 @@ type ApplicationSpec struct {
 	//
 	// The ConfigMap and Secret resources must live in the same Kubernetes namespace as the Application resource.
 	EnvFrom []EnvFrom `json:"envFrom,omitempty"`
+
+	Rest unstructured.Unstructured `json:"-"`
 }
 
 type ApplicationStatus struct {
@@ -111,9 +112,10 @@ func (a *Application) GetSpec() []byte {
 		return nil
 	}
 
-	b, _ := json.Marshal(a.Spec)
-
-	fmt.Println("RESULTING SPEC", string(b))
+	b, err := json.Marshal(a.Spec)
+	if err != nil {
+		panic(err)
+	}
 	return b
 }
 
@@ -145,4 +147,41 @@ func (a *Application) Hash() (string, error) {
 	}
 
 	return strconv.FormatUint(h, 16), nil
+}
+
+func init() {
+	SchemeBuilder.Register(&Application{}, &ApplicationList{})
+}
+
+type _app ApplicationSpec
+
+func (a *ApplicationSpec) UnmarshalJSON(b []byte) error {
+	var app _app
+	rest, err := marshmallow.Unmarshal(b, &app, marshmallow.WithExcludeKnownFieldsFromMap(true))
+	if err != nil {
+		return err
+	}
+
+	*a = ApplicationSpec(app)
+	a.Rest.Object = rest
+	return nil
+}
+
+func (a ApplicationSpec) MarshalJSON() ([]byte, error) {
+	b1, err := json.Marshal(_app(a))
+	if err != nil {
+		return nil, err
+	}
+
+	if len(a.Rest.Object) == 0 {
+		return b1, nil
+	}
+
+	b2, err := json.Marshal(a.Rest.Object)
+	if err != nil {
+		return nil, err
+	}
+
+	b := append(append(b1[:len(b1)-1], ','), b2[1:]...)
+	return b, nil
 }

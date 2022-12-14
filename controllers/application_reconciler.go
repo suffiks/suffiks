@@ -63,44 +63,44 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 
 	depl.Spec.Template.Annotations = mergeMaps(depl.Spec.Template.Annotations, depl.Annotations)
 
-	fmt.Println("SET PORT TO ", spec.Port)
-
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      app.Name,
-			Namespace: app.Namespace,
-			Labels:    make(map[string]string),
-		},
-		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Port:       80,
-					TargetPort: intstr.FromInt(spec.Port),
+	if spec.Port > 0 {
+		svc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      app.Name,
+				Namespace: app.Namespace,
+				Labels:    make(map[string]string),
+			},
+			Spec: corev1.ServiceSpec{
+				Ports: []corev1.ServicePort{
+					{
+						Name:       "http",
+						Port:       80,
+						TargetPort: intstr.FromInt(spec.Port),
+					},
+				},
+				Selector: map[string]string{
+					"app": app.Name,
 				},
 			},
-			Selector: map[string]string{
-				"app": app.Name,
-			},
-		},
-	}
-	for k, v := range depl.Labels {
-		svc.Labels[k] = v
-	}
+		}
+		for k, v := range depl.Labels {
+			svc.Labels[k] = v
+		}
 
-	if err := a.Client.Create(ctx, svc); err != nil {
-		if errors.IsAlreadyExists(err) {
-			span.SetAttributes(attribute.String("action", "update svc"))
-			if err := a.Client.Update(ctx, svc); err != nil {
+		if err := a.Client.Create(ctx, svc); err != nil {
+			if errors.IsAlreadyExists(err) {
+				span.SetAttributes(attribute.String("action", "update svc"))
+				if err := a.Client.Update(ctx, svc); err != nil {
+					span.RecordError(err)
+					return fmt.Errorf("Reconcile update svc: %w", err)
+				}
+			} else {
 				span.RecordError(err)
-				return fmt.Errorf("Reconcile update svc: %w", err)
+				return fmt.Errorf("Reconcile create svc: %w", err)
 			}
 		} else {
-			span.RecordError(err)
-			return fmt.Errorf("Reconcile create svc: %w", err)
+			span.SetAttributes(attribute.String("action", "create svc"))
 		}
-	} else {
-		span.SetAttributes(attribute.String("action", "create svc"))
 	}
 
 	b, _ := json.MarshalIndent(depl, "", "  ")
@@ -200,6 +200,14 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 		"app": app.Name,
 	}
 
+	ports := []corev1.ContainerPort{}
+	if spec.Port > 0 {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          "http",
+			ContainerPort: int32(spec.Port),
+		})
+	}
+
 	return &appsv1.Deployment{
 		ObjectMeta: a.objectMeta(app),
 		Spec: appsv1.DeploymentSpec{
@@ -217,12 +225,7 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 							Name:    app.Name,
 							Image:   spec.Image,
 							Command: spec.Command,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "http",
-									ContainerPort: int32(spec.Port),
-								},
-							},
+							Ports:   ports,
 						},
 					},
 				},

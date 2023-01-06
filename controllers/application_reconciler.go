@@ -21,7 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-var _ Reconciler[*suffiksv1.Application] = &AppReconciler{}
+var (
+	_ Reconciler[*suffiksv1.Application]        = &AppReconciler{}
+	_ ReconcilerDefault[*suffiksv1.Application] = &AppReconciler{}
+)
 
 // When changing the lines below, run make
 //+kubebuilder:rbac:groups=suffiks.com,resources=applications,verbs=get;list;watch;create;update;patch;delete
@@ -37,6 +40,8 @@ var _ Reconciler[*suffiksv1.Application] = &AppReconciler{}
 type AppReconciler struct {
 	Scheme *runtime.Scheme
 	Client client.Client
+
+	Defaults *suffiksv1.ApplicationDefaults
 }
 
 func (a *AppReconciler) NewObject() *suffiksv1.Application { return &suffiksv1.Application{} }
@@ -195,6 +200,15 @@ func (a *AppReconciler) Owns() []client.Object {
 	}
 }
 
+func (a *AppReconciler) Default(ctx context.Context, obj *suffiksv1.Application) error {
+	if obj.Spec.Resources == nil && a.Defaults.Resources != nil {
+		span := tracing.Get(ctx)
+		span.AddEvent("add_default_resources")
+		obj.Spec.Resources = a.Defaults.Resources.DeepCopy()
+	}
+	return nil
+}
+
 func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1.ApplicationSpec) *appsv1.Deployment {
 	labels := map[string]string{
 		"app": app.Name,
@@ -206,6 +220,19 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 			Name:          "http",
 			ContainerPort: int32(spec.Port),
 		})
+	}
+
+	rq := corev1.ResourceRequirements{}
+	if spec.Resources != nil {
+		rq = corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: spec.Resources.Limits.Memory,
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: spec.Resources.Requests.Memory,
+				corev1.ResourceCPU:    spec.Resources.Requests.CPU,
+			},
+		}
 	}
 
 	return &appsv1.Deployment{
@@ -222,10 +249,11 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:    app.Name,
-							Image:   spec.Image,
-							Command: spec.Command,
-							Ports:   ports,
+							Name:      app.Name,
+							Image:     spec.Image,
+							Command:   spec.Command,
+							Ports:     ports,
+							Resources: rq,
 						},
 					},
 				},

@@ -33,6 +33,10 @@ type Reconciler[V base.Object] interface {
 	Owns() []client.Object
 }
 
+type ReconcilerDefault[V base.Object] interface {
+	Default(ctx context.Context, obj V) error
+}
+
 const suffiksFinalizer = "suffiks.suffiks.com/finalizer"
 
 type ReconcilerWrapper[V base.Object] struct {

@@ -131,8 +131,9 @@ func main() {
 	appRec := &controllers.ReconcilerWrapper[*suffiksv1.Application]{
 		Client: mgr.GetClient(),
 		Child: &controllers.AppReconciler{
-			Scheme: mgr.GetScheme(),
-			Client: mgr.GetClient(),
+			Scheme:   mgr.GetScheme(),
+			Client:   mgr.GetClient(),
+			Defaults: ctrlConfig.ApplicationDefaults,
 		},
 		CRDController: extController,
 	}

@@ -39,6 +39,14 @@ type ProjectConfig struct {
 	// Listening address for the documentation server.
 	// +optional
 	DocumentationAddress string `json:"documentationAddress,omitempty"`
+
+	// +optional
+	ApplicationDefaults *ApplicationDefaults `json:"applicationDefaults,omitempty"`
+}
+
+type ApplicationDefaults struct {
+	// +optional
+	Resources *ResourceRequirements `json:"resources,omitempty"`
 }
 
 func init() {

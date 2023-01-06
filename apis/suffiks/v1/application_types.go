@@ -9,9 +9,33 @@ import (
 
 	"github.com/mitchellh/hashstructure/v2"
 	"github.com/perimeterx/marshmallow"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
+
+type ResourceRequirementsLimits struct {
+	// Number of bytes to limit.
+	// +kubebuilder:validation:Required
+	Memory resource.Quantity `json:"memory"`
+}
+
+type ResourceRequirementsRequests struct {
+	// Number of CPU units to request.
+	// +kubebuilder:validation:Required
+	CPU resource.Quantity `json:"cpu"`
+
+	// Number of bytes to request.
+	// +kubebuilder:validation:Required
+	Memory resource.Quantity `json:"memory"`
+}
+
+type ResourceRequirements struct {
+	// +kubebuilder:validation:Required
+	Limits ResourceRequirementsLimits `json:"limits"`
+	// +kubebuilder:validation:Required
+	Requests ResourceRequirementsRequests `json:"requests"`
+}
 
 type EnvVars []EnvVar
 
@@ -66,6 +90,9 @@ type ApplicationSpec struct {
 	//
 	// The ConfigMap and Secret resources must live in the same Kubernetes namespace as the Application resource.
 	EnvFrom []EnvFrom `json:"envFrom,omitempty"`
+
+	//+optional
+	Resources *ResourceRequirements `json:"resources,omitempty"`
 
 	Rest unstructured.Unstructured `json:"-"`
 }

@@ -9,3 +9,10 @@ webhook:
 leaderElection:
   leaderElect: true
   resourceName: 0ff08fbf.suffiks.com
+applicationDefaults:
+  resources:
+    limits:
+      memory: 30Mi
+    requests:
+      cpu: 100m
+      memory: 20Mi

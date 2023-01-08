@@ -201,7 +201,7 @@ func (a *AppReconciler) Owns() []client.Object {
 }
 
 func (a *AppReconciler) Default(ctx context.Context, obj *suffiksv1.Application) error {
-	if obj.Spec.Resources == nil && a.Defaults.Resources != nil {
+	if obj.Spec.Resources == nil && a.Defaults != nil && a.Defaults.Resources != nil {
 		span := tracing.Get(ctx)
 		span.AddEvent("add_default_resources")
 		obj.Spec.Resources = a.Defaults.Resources.DeepCopy()

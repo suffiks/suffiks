@@ -195,8 +195,9 @@ func (a *AppReconciler) Extensions(app *suffiksv1.Application) []string {
 
 func (a *AppReconciler) Owns() []client.Object {
 	return []client.Object{
-		&appsv1.Deployment{},
-		&corev1.Service{},
+		// TODO: Fix recursive reconciliation loop before enabling this
+		// &appsv1.Deployment{},
+		// &corev1.Service{},
 	}
 }
 

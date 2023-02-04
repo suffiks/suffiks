@@ -1,4 +1,4 @@
-FROM golang:1.19 as builder
+FROM golang:1.20 as builder
 
 RUN apk add --no-cache git
 
@@ -14,7 +14,7 @@ RUN go mod download
 COPY . /workspace
 
 # Build
-RUN CGO_ENABLED=0 go build -a -o {{ .Name }} ./cmd/{{ .Name }}
+RUN go build -a -o {{ .Name }} ./cmd/{{ .Name }}
 
 FROM alpine
 WORKDIR /

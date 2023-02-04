@@ -64,8 +64,6 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.handleError(ctx, err, "unable to fetch "+kind, client.IgnoreNotFound)
 	}
 
-	v.SetManagedFields(nil)
-
 	if v.GetDeletionTimestamp() != nil {
 		if !controllerutil.ContainsFinalizer(v, suffiksFinalizer) {
 			return ctrl.Result{}, nil
@@ -158,6 +156,7 @@ func (r *ReconcilerWrapper[V]) SetupWithManager(mgr ctrl.Manager) (err error) {
 // - log the error with the msg
 // - return the error after modifying it using the optional f functions
 func (r *ReconcilerWrapper[V]) handleError(ctx context.Context, err error, msg string, f ...func(err error) error) (ctrl.Result, error) {
+	log := logr.FromContext(ctx)
 	if err == nil {
 		return ctrl.Result{}, nil
 	}
@@ -179,7 +178,6 @@ func (r *ReconcilerWrapper[V]) handleError(ctx context.Context, err error, msg s
 		}
 	}
 
-	// log := logr.FromContext(ctx)
-	// log.Error(err, msg)
+	log.Error(err, msg)
 	return ctrl.Result{}, err
 }

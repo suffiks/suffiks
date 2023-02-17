@@ -26,7 +26,9 @@ var (
 )
 
 func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig) error {
+	log = log.WithName("otel-proivder")
 	if !cfg.Enabled() {
+		log.Info("tracing disabled")
 		return nil
 	}
 
@@ -83,6 +85,8 @@ func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig)
 	otel.SetErrorHandler(&errorHandler{log: log})
 	otel.SetTracerProvider(provider)
 	tracer = provider.Tracer(name)
+
+	log.Info("otel tracing provider configured")
 	return nil
 }
 

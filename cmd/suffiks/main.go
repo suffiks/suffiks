@@ -57,8 +57,10 @@ func main() {
 		Encoder: zapcore.NewJSONEncoder(zapcore.EncoderConfig{
 			EncodeCaller: zapcore.ShortCallerEncoder,
 			// StacktraceKey: "stacktrace",
-			CallerKey:  "caller",
-			MessageKey: "msg",
+			CallerKey:  "c",
+			MessageKey: "m",
+			LevelKey:   "l",
+			TimeKey:    "t",
 			// FunctionKey: "function",
 			// TimeKey:       "time",
 		}),

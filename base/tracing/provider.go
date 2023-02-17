@@ -71,6 +71,7 @@ func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig)
 	provider = trace.NewTracerProvider(
 		// Always be sure to batch in production.
 		trace.WithBatcher(exp),
+
 		// Record information about this application in an Resource.
 		trace.WithResource(
 			resource.NewWithAttributes(

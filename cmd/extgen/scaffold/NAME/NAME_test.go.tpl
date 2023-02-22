@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	v1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/testutil"
@@ -22,12 +23,12 @@ var _ extension.DefaultableExtension[*{{.GoName}}] = &Extension{}
 
 
 func Test{{.GoName}}(t *testing.T) {
-	app := &base.Application{
+	app := &v1.Application{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "some-app",
 			Namespace: "mynamespace",
 		},
-		Spec: testutil.AppSpec(map[string]any{
+		Spec: testutil.AppSpec(nil, map[string]any{
 			"{{.Name}}": map[string]any{
 				"extraEnv": map[string]any{
 					"name":  "EXTRA_ENV_NAME",

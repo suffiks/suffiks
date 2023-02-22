@@ -38,7 +38,7 @@ type Category struct {
 type Group struct {
 	Name   string `json:"name"`
 	Slug   string `json:"slug"`
-	Weight int    `json:"-"`
+	Weight int    `json:"weight"`
 	Pages  Pages  `json:"pages"`
 }
 

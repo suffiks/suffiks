@@ -8,3 +8,6 @@ docker-build:
 kind: docker
 	kind load docker-image github.com/suffiks/extension-{{ .Name }}:latest
 	kubectl apply -k config
+
+test: generate
+	go test --cover ./...

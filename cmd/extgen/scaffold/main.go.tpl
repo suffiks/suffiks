@@ -23,6 +23,9 @@ import (
 
 var configFile string
 
+//go:embed docs/*.md
+var docs embed.FS
+
 func init() {
 	flag.StringVar(&configFile, "config-file", "", "path to config file")
 }
@@ -55,12 +58,17 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	fmt.Println("Listening on", config.ListenAddress)
+	docs := &extension.Documentation{
+		FS:   docs,
+		Root: "docs",
+	}
 
 	ext := &{{ .Name }}.Extension{
 	{{- if .Kubernetes}}
 		Client: client,
 	{{end}}
 	}
-	return extension.Serve[*{{ .Name }}.{{.GoName}}](ctx, config, ext)
+
+	fmt.Println("Listening on", config.ListenAddress)
+	return extension.Serve[*{{ .Name }}.{{.GoName}}](ctx, config, ext, docs)
 }

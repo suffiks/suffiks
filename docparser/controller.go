@@ -1,7 +1,6 @@
 package docparser
 
 import (
-	"encoding/json"
 	"io/fs"
 	"regexp"
 	"sort"
@@ -41,10 +40,14 @@ func (c *Controller) Remove(name string) {
 	delete(c.docs, name)
 }
 
-func (c *Controller) copy() map[string][]*Category {
-	b, _ := json.Marshal(c.docs)
-	var res map[string][]*Category
-	_ = json.Unmarshal(b, &res)
+func (c *Controller) copy() []*Category {
+	res := []*Category{}
+	for _, doc := range c.docs {
+		for _, d := range doc {
+			res = append(res, d.copy())
+		}
+	}
+
 	return res
 }
 
@@ -64,14 +67,12 @@ func (c *Controller) GetAll() []*Category {
 		return nil
 	}
 
-	for _, docs := range unprocessed {
-		for _, doc := range docs {
-			parent := find(doc)
-			if parent == nil {
-				categories = append(categories, doc)
-			} else {
-				parent.Groups = append(parent.Groups, doc.Groups...)
-			}
+	for _, doc := range unprocessed {
+		parent := find(doc)
+		if parent == nil {
+			categories = append(categories, doc)
+		} else {
+			parent.Groups = append(parent.Groups, doc.Groups...)
 		}
 	}
 

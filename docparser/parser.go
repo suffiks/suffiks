@@ -147,11 +147,22 @@ type Token interface {
 	addChild(Token)
 	lastChild() Token
 	tokens() []Token
+	copy() Token
+}
+
+type Tokens []Token
+
+func (t Tokens) copy() Tokens {
+	toks := make(Tokens, len(t))
+	for i, tok := range t {
+		toks[i] = tok.copy()
+	}
+	return toks
 }
 
 type TokenBase struct {
-	Kind   string  `json:"kind"`
-	Tokens []Token `json:"tokens,omitempty"`
+	Kind   string `json:"kind"`
+	Tokens Tokens `json:"tokens,omitempty"`
 	p      Token
 }
 
@@ -182,16 +193,43 @@ func (t *TokenBase) tokens() []Token {
 	return t.Tokens
 }
 
+func (t *TokenBase) copy() TokenBase {
+	return TokenBase{
+		Kind:   t.Kind,
+		Tokens: t.Tokens.copy(),
+	}
+}
+
 type Document struct {
 	TokenBase
+}
+
+func (d *Document) copy() Token {
+	return &Document{
+		TokenBase: d.TokenBase.copy(),
+	}
 }
 
 type Heading struct {
 	TokenBase
 	Level int `json:"level,omitempty"`
 }
+
+func (h *Heading) copy() Token {
+	return &Heading{
+		TokenBase: h.TokenBase.copy(),
+		Level:     h.Level,
+	}
+}
+
 type Paragraph struct {
 	TokenBase
+}
+
+func (p *Paragraph) copy() Token {
+	return &Paragraph{
+		TokenBase: p.TokenBase.copy(),
+	}
 }
 
 type Text struct {
@@ -199,9 +237,23 @@ type Text struct {
 	Text string `json:"text,omitempty"`
 }
 
+func (t *Text) copy() Token {
+	return &Text{
+		TokenBase: t.TokenBase.copy(),
+		Text:      t.Text,
+	}
+}
+
 type CodeSpan struct {
 	TokenBase
 	Text string `json:"text,omitempty"`
+}
+
+func (c *CodeSpan) copy() Token {
+	return &CodeSpan{
+		TokenBase: c.TokenBase.copy(),
+		Text:      c.Text,
+	}
 }
 
 type CodeBlock struct {
@@ -210,10 +262,26 @@ type CodeBlock struct {
 	Text     string `json:"text,omitempty"`
 }
 
+func (c *CodeBlock) copy() Token {
+	return &CodeBlock{
+		TokenBase: c.TokenBase.copy(),
+		Language:  c.Language,
+		Text:      c.Text,
+	}
+}
+
 type Link struct {
 	TokenBase
 	Destination string `json:"destination,omitempty"`
 	Title       string `json:"title,omitempty"`
+}
+
+func (l *Link) copy() Token {
+	return &Link{
+		TokenBase:   l.TokenBase.copy(),
+		Destination: l.Destination,
+		Title:       l.Title,
+	}
 }
 
 type List struct {
@@ -223,13 +291,37 @@ type List struct {
 	Tight   bool `json:"tight,omitempty"`
 }
 
+func (l *List) copy() Token {
+	return &List{
+		TokenBase: l.TokenBase.copy(),
+		Start:     l.Start,
+		Ordered:   l.Ordered,
+		Tight:     l.Tight,
+	}
+}
+
 type ListItem struct {
 	TokenBase
 	Offset int `json:"offset,omitempty"`
+}
+
+func (l *ListItem) copy() Token {
+	return &ListItem{
+		TokenBase: l.TokenBase.copy(),
+		Offset:    l.Offset,
+	}
 }
 
 type Admonition struct {
 	TokenBase
 	Level string `json:"level,omitempty"`
 	Title string `json:"title,omitempty"`
+}
+
+func (a *Admonition) copy() Token {
+	return &Admonition{
+		TokenBase: a.TokenBase.copy(),
+		Level:     a.Level,
+		Title:     a.Title,
+	}
 }

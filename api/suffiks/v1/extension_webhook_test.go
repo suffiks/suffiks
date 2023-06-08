@@ -28,9 +28,11 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 				Spec: ExtensionSpec{
 					Targets: []Target{"Application", "Work"},
-					Controller: ExtensionController{
-						Namespace: "somenamespace",
-						Service:   "servicename",
+					Controller: ControllerSpec{
+						GRPC: ExtensionGRPCController{
+							Namespace: "somenamespace",
+							Service:   "servicename",
+						},
 					},
 					Webhooks: ExtensionWebhooks{
 						Validation: true,
@@ -51,8 +53,10 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 				Spec: ExtensionSpec{
 					Targets: []Target{"Application"},
-					Controller: ExtensionController{
-						Service: "servicename",
+					Controller: ControllerSpec{
+						GRPC: ExtensionGRPCController{
+							Service: "servicename",
+						},
 					},
 					OpenAPIV3Schema: mustJSON(apiextv1.JSONSchemaProps{
 						Type: "object",
@@ -76,8 +80,10 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
-					Controller: ExtensionController{
-						Service: "servicename",
+					Controller: ControllerSpec{
+						GRPC: ExtensionGRPCController{
+							Service: "servicename",
+						},
 					},
 					OpenAPIV3Schema: mustJSON(apiextv1.JSONSchemaProps{
 						Type: "object",
@@ -94,8 +100,10 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
-					Controller: ExtensionController{
-						Service: "servicename",
+					Controller: ControllerSpec{
+						GRPC: ExtensionGRPCController{
+							Service: "servicename",
+						},
 					},
 					OpenAPIV3Schema: runtime.RawExtension{},
 				},
@@ -110,8 +118,10 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
-					Controller: ExtensionController{
-						Service: "servicename",
+					Controller: ControllerSpec{
+						GRPC: ExtensionGRPCController{
+							Service: "servicename",
+						},
 					},
 					OpenAPIV3Schema: mustJSON(apiextv1.JSONSchemaProps{
 						Type: "string",

@@ -18,7 +18,9 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: Work is the base Schema for the work API
+        description: "Work is the base Schema for the work API. This struct contains
+          the base spec without any extensions. \n Fields that are not part of the
+          base schema are stored in the `Rest` field."
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

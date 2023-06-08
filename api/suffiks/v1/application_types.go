@@ -114,7 +114,10 @@ type ApplicationStatus struct {
 //+kubebuilder:object:root=true
 // +genclient
 
-// Application is the base Schema for the application API
+// Application is the base Schema for the application API.
+// This struct contains the base spec without any extensions.
+//
+// Fields that are not part of the base schema are stored in the `Rest` field.
 type Application struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

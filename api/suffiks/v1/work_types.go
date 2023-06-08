@@ -50,7 +50,10 @@ type WorkStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Work is the base Schema for the work API
+// Work is the base Schema for the work API.
+// This struct contains the base spec without any extensions.
+//
+// Fields that are not part of the base schema are stored in the `Rest` field.
 type Work struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

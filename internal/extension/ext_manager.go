@@ -72,7 +72,7 @@ func (c *ExtensionManager) Add(ext suffiksv1.Extension) error {
 func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target) error {
 	spec := ext.Spec.OpenAPIV3Schema.Raw
 
-	gclient, err := grpc.Dial(ext.Spec.Controller.Target(), c.grpcOptions...)
+	gclient, err := grpc.Dial(ext.Spec.Controller.GRPC.Target(), c.grpcOptions...)
 	if err != nil {
 		return fmt.Errorf("ExtensionManager.add: grpc dial error: %w", err)
 	}

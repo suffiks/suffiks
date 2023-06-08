@@ -78,15 +78,16 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 
 	var err error
-	ctrlConfig := suffiksv1.ProjectConfig{}
+	// TODO: Re-introduce config file support
+	// ctrlConfig := suffiksv1.ProjectConfig{}
 	options := ctrl.Options{Scheme: scheme}
-	if configFile != "" {
-		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
-		if err != nil {
-			setupLog.Error(err, "unable to load the config file")
-			os.Exit(1)
-		}
-	}
+	// if configFile != "" {
+	// 	options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
+	// 	if err != nil {
+	// 		setupLog.Error(err, "unable to load the config file")
+	// 		os.Exit(1)
+	// 	}
+	// }
 
 	cfg := ctrl.GetConfigOrDie()
 	cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
@@ -134,9 +135,9 @@ func main() {
 	appRec := &controller.ReconcilerWrapper[*suffiksv1.Application]{
 		Client: mgr.GetClient(),
 		Child: &controller.AppReconciler{
-			Scheme:   mgr.GetScheme(),
-			Client:   mgr.GetClient(),
-			Defaults: ctrlConfig.ApplicationDefaults,
+			Scheme: mgr.GetScheme(),
+			Client: mgr.GetClient(),
+			// Defaults: ctrlConfig.ApplicationDefaults,
 		},
 		CRDController: extController,
 	}
@@ -158,7 +159,7 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	if !ctrlConfig.WebhooksDisabled {
+	if true { //!ctrlConfig.WebhooksDisabled {
 		if err = (&suffiksv1.Extension{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Extension")
 			os.Exit(1)
@@ -191,13 +192,13 @@ func main() {
 	}
 
 	tracerLog := ctrl.Log.WithName("tracing")
-	err = tracing.Provider(ctx, tracerLog, ctrlConfig.Tracing)
+	err = tracing.Provider(ctx, tracerLog) // ctrlConfig.Tracing)
 	if err != nil {
 		setupLog.Error(err, "unable to create tracer provider")
 		os.Exit(1)
 	}
 
-	go documentationServer(ctx, ctrlConfig.DocumentationAddress, crdMgr, setupLog)
+	go documentationServer(ctx, "" /*ctrlConfig.DocumentationAddress*/, crdMgr, setupLog)
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")

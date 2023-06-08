@@ -10,14 +10,34 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
-type ExtensionController struct {
+type ExtensionGRPCController struct {
 	Namespace string `json:"namespace"`
 	Service   string `json:"service"`
 	Port      int    `json:"port"`
 }
 
-func (e ExtensionController) Target() string {
+func (e ExtensionGRPCController) Target() string {
 	return net.JoinHostPort(e.Service+"."+e.Namespace, strconv.Itoa(e.Port))
+}
+
+// +kubebuilder:validation:Enum=Get;Create;Update;Delete
+type Method string
+
+type ExtensionWASIControllerResource struct {
+	//+kubebuilder:validation:Pattern=^[a-z]([-a-z0-9\.]*[a-z0-9])?$
+	Group string `json:"group"`
+	//+kubebuilder:validation:Pattern=^[a-z]([-a-z0-9]*[a-z0-9])?$
+	Version string `json:"version"`
+	//+kubebuilder:validation:Pattern=^[a-z]([-a-z0-9]*[a-z0-9])?$
+	Resource string `json:"resource"`
+	//+required
+	Methods []Method `json:"methods"`
+}
+
+type ExtensionWASIController struct {
+	Image string `json:"image"`
+	// +optional
+	Resources []ExtensionWASIControllerResource `json:"resources,omitempty"`
 }
 
 // +kubebuilder:validation:Enum=Application;Work
@@ -28,13 +48,20 @@ type ExtensionWebhooks struct {
 	Defaulting bool `json:"defaulting,omitempty"`
 }
 
+type ControllerSpec struct {
+	// +optional
+	GRPC ExtensionGRPCController `json:"grpc,omitempty"`
+	// +optional
+	WASI ExtensionWASIController `json:"wasi,omitempty"`
+}
+
 type ExtensionSpec struct {
 	Targets []Target `json:"targets"`
 	// +kubebuilder:pruning:PreserveUnknownFields
 	OpenAPIV3Schema runtime.RawExtension `json:"openAPIV3Schema"`
 
-	Controller ExtensionController `json:"controller"`
-	Webhooks   ExtensionWebhooks   `json:"webhooks,omitempty"`
+	Controller ControllerSpec    `json:"controller"`
+	Webhooks   ExtensionWebhooks `json:"webhooks,omitempty"`
 
 	// Always call the extension, even if the extension schema isn't set
 	Always bool `json:"always,omitempty"`

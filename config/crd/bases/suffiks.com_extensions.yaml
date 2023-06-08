@@ -55,16 +55,54 @@ spec:
                 type: boolean
               controller:
                 properties:
-                  namespace:
-                    type: string
-                  port:
-                    type: integer
-                  service:
-                    type: string
-                required:
-                - namespace
-                - port
-                - service
+                  grpc:
+                    properties:
+                      namespace:
+                        type: string
+                      port:
+                        type: integer
+                      service:
+                        type: string
+                    required:
+                    - namespace
+                    - port
+                    - service
+                    type: object
+                  wasi:
+                    properties:
+                      image:
+                        type: string
+                      resources:
+                        items:
+                          properties:
+                            group:
+                              pattern: ^[a-z]([-a-z0-9\.]*[a-z0-9])?$
+                              type: string
+                            methods:
+                              items:
+                                enum:
+                                - Get
+                                - Create
+                                - Update
+                                - Delete
+                                type: string
+                              type: array
+                            resource:
+                              pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            version:
+                              pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                          required:
+                          - group
+                          - methods
+                          - resource
+                          - version
+                          type: object
+                        type: array
+                    required:
+                    - image
+                    type: object
                 type: object
               openAPIV3Schema:
                 type: object

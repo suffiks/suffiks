@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 
 	"github.com/go-logr/logr"
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
@@ -25,12 +24,12 @@ var (
 	provider *trace.TracerProvider
 )
 
-func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig) error {
+func Provider(ctx context.Context, log logr.Logger /*, cfg suffiksv1.TracingConfig */) error {
 	log = log.WithName("otel-proivder")
-	if !cfg.Enabled() {
-		log.Info("tracing disabled")
-		return nil
-	}
+	// if !cfg.Enabled() {
+	// 	log.Info("tracing disabled")
+	// 	return nil
+	// }
 
 	dirty := true
 	revision := "unknown"
@@ -47,9 +46,9 @@ func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig)
 	}
 
 	opts := []otlptracegrpc.Option{}
-	if cfg.OTLPEndpoint != "" {
-		opts = append(opts, otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint))
-	}
+	// if cfg.OTLPEndpoint != "" {
+	// 	opts = append(opts, otlptracegrpc.WithEndpoint(cfg.OTLPEndpoint))
+	// }
 	client := otlptracegrpc.NewClient(opts...)
 	exp, err := otlptrace.New(ctx, client)
 	if err != nil {
@@ -60,9 +59,9 @@ func Provider(ctx context.Context, log logr.Logger, cfg suffiksv1.TracingConfig)
 		semconv.ServiceNameKey.String(name),
 		semconv.ServiceVersionKey.String(revision),
 	}
-	for k, v := range cfg.Attributes {
-		cfgAttrs = append(cfgAttrs, attribute.String(k, v))
-	}
+	// for k, v := range cfg.Attributes {
+	// 	cfgAttrs = append(cfgAttrs, attribute.String(k, v))
+	// }
 
 	if dirty {
 		cfgAttrs = append(cfgAttrs, attribute.Bool("modified", true))

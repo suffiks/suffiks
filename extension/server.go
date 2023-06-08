@@ -48,7 +48,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
 		)
 
-		if err := tracing.Provider(ctx, logr.Discard(), config.getTracing()); err != nil {
+		if err := tracing.Provider(ctx, logr.Discard() /*, config.getTracing()*/); err != nil {
 			return err
 		}
 	}

@@ -1,4 +1,4 @@
-package runtime_test
+package specgen_test
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/suffiks/suffiks/base/runtime"
+	"github.com/suffiks/suffiks/internal/specgen"
 	"sigs.k8s.io/yaml"
 )
 
@@ -21,13 +21,13 @@ func TestGenerate(t *testing.T) {
 
 	for _, base := range bases {
 		t.Run(filepath.Base(base), func(t *testing.T) {
-			f, err := os.OpenFile(base, os.O_RDONLY, 0644)
+			f, err := os.OpenFile(base, os.O_RDONLY, 0o644)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer f.Close()
 
-			gen, err := runtime.FromYAML(f)
+			gen, err := specgen.FromYAML(f)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -65,7 +65,7 @@ func TestGenerate(t *testing.T) {
 						}
 
 						if os.Getenv("SUFFIKS_UPDATE_TESTDATA") == "1" {
-							err := os.WriteFile(filepath.Join(append(pathParts, file.Name())...), b, 0644)
+							err := os.WriteFile(filepath.Join(append(pathParts, file.Name())...), b, 0o644)
 							if err != nil {
 								t.Fatal(err)
 							}
@@ -92,7 +92,7 @@ func parseFile(path string) (json.RawMessage, error) {
 	var jrm json.RawMessage
 	switch filepath.Ext(path) {
 	case ".json":
-		f, err := os.OpenFile(path, os.O_RDONLY, 0644)
+		f, err := os.OpenFile(path, os.O_RDONLY, 0o644)
 		if err != nil {
 			return nil, err
 		}

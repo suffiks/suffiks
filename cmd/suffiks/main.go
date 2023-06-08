@@ -16,17 +16,18 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks"
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/controllers"
 	"github.com/suffiks/suffiks/docparser"
-	"github.com/suffiks/suffiks/extension/protogen"
+	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	uzap "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -102,18 +103,18 @@ func main() {
 	}
 
 	grpcOptions := []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	}
 
-	crdMgr, err := base.NewExtensionManager(suffiks.CRDFiles, grpcOptions)
+	crdMgr, err := extension.NewExtensionManager(suffiks.CRDFiles, grpcOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to create CRD manager")
 		os.Exit(1)
 	}
 
-	extController := base.NewExtensionController(crdMgr)
+	extController := controller.NewExtensionController(crdMgr)
 
 	if err := extController.RegisterMetrics(metrics.Registry); err != nil {
 		setupLog.Error(err, "unable to register CRD metrics")
@@ -210,7 +211,7 @@ func main() {
 	}
 }
 
-func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionManager, log logr.Logger) {
+func documentationServer(ctx context.Context, addr string, mgr *extension.ExtensionManager, log logr.Logger) {
 	fmt.Println("################ STARTING DOCUMENTATION SERVER ################")
 	ctrl := docparser.NewController()
 	ctrl.AddFS("_suffiks", suffiks.DocFiles)
@@ -245,18 +246,18 @@ func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionMa
 	}
 }
 
-func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *base.ExtensionManager, log logr.Logger) {
+func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *extension.ExtensionManager, log logr.Logger) {
 	for {
 		for _, ext := range mgr.All() {
-			fmt.Println("Start update docs for", ext.GetName())
-			pages, err := ext.Client().Documentation(ctx, &protogen.DocumentationRequest{})
+			fmt.Println("Start update docs for", ext.Name())
+			pages, err := ext.Documentation(ctx)
 			if err != nil {
 				log.V(5).Error(err, "unable to get documentation")
 				continue
 			}
 
-			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.GetName())
-			ctrl.Parse(ext.Name, pages.GetPages())
+			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.Name())
+			ctrl.Parse(ext.Name(), pages.GetPages())
 		}
 		select {
 		case <-ctx.Done():

@@ -1,4 +1,4 @@
-package base
+package extension
 
 import (
 	"encoding/json"
@@ -8,55 +8,23 @@ import (
 	"strings"
 	"sync"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base/runtime"
 	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/specgen"
 	"google.golang.org/grpc"
-	v1 "k8s.io/api/core/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
-type keyValue map[string]any
-
-type Changeset struct {
-	lock sync.Mutex
-
-	Environment []v1.EnvVar
-	Labels      map[string]string
-	Annotations map[string]string
-	EnvFrom     []v1.EnvFromSource
-	MergePatch  []byte
-}
-
-func (c *Changeset) AddMergePatch(patch []byte) error {
-	if len(patch) == 0 {
-		return nil
-	}
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if len(c.MergePatch) == 0 {
-		c.MergePatch = patch
-	} else {
-		combined, err := jsonpatch.MergeMergePatches(c.MergePatch, patch)
-		if err != nil {
-			return err
-		}
-		c.MergePatch = combined
-	}
-	return nil
-}
+type KeyValue map[string]any
 
 type ExtensionManager struct {
 	grpcOptions []grpc.DialOption
 
 	lock sync.Mutex
-	spec map[suffiksv1.Target]*runtime.Generator
+	spec map[suffiksv1.Target]*specgen.Generator
 
 	rwlock     sync.RWMutex
-	extensions map[string]extension
+	extensions map[string]Extension
 }
 
 // NewExtensionManager creates a new ExtensionManager. It reads all .yaml files from the provided fs.FS as base types.
@@ -64,8 +32,8 @@ func NewExtensionManager(files fs.FS, grpcOptions []grpc.DialOption) (*Extension
 	mgr := &ExtensionManager{
 		grpcOptions: grpcOptions,
 
-		spec:       map[suffiksv1.Target]*runtime.Generator{},
-		extensions: map[string]extension{},
+		spec:       map[suffiksv1.Target]*specgen.Generator{},
+		extensions: map[string]Extension{},
 	}
 	err := fs.WalkDir(files, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -80,7 +48,7 @@ func NewExtensionManager(files fs.FS, grpcOptions []grpc.DialOption) (*Extension
 		}
 		defer file.Close()
 
-		crd, err := runtime.FromYAML(file)
+		crd, err := specgen.FromYAML(file)
 		if err != nil {
 			return err
 		}
@@ -124,7 +92,7 @@ func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target)
 	c.rwlock.Lock()
 	defer c.rwlock.Unlock()
 
-	wext := extension{
+	wext := &ProtoExtension{
 		Extension: ext,
 		client:    client,
 		gclient:   gclient,
@@ -167,13 +135,13 @@ func (c *ExtensionManager) Schema(target suffiksv1.Target) *apiextv1.JSONSchemaP
 	return g.Schema()
 }
 
-func (c *ExtensionManager) ExtensionsFor(kind string) []extension {
+func (c *ExtensionManager) ExtensionsFor(kind string) []Extension {
 	c.rwlock.RLock()
 	defer c.rwlock.RUnlock()
 
-	cp := []extension{}
+	cp := []Extension{}
 	for _, v := range c.extensions {
-		if contains(v.Spec.Targets, suffiksv1.Target(kind)) {
+		if contains(v.Spec().Targets, suffiksv1.Target(kind)) {
 			cp = append(cp, v)
 		}
 	}
@@ -181,47 +149,44 @@ func (c *ExtensionManager) ExtensionsFor(kind string) []extension {
 	return cp
 }
 
-func (c *ExtensionManager) All() []extension {
+func (c *ExtensionManager) All() []Extension {
 	c.rwlock.RLock()
 	defer c.rwlock.RUnlock()
 
-	cp := []extension{}
+	cp := []Extension{}
 	added := map[string]struct{}{}
 	for _, v := range c.extensions {
-		if _, ok := added[v.Name]; ok {
+		if _, ok := added[v.Name()]; ok {
 			continue
 		}
-		added[v.Name] = struct{}{}
+		added[v.Name()] = struct{}{}
 		cp = append(cp, v)
 	}
 
 	return cp
 }
 
-type extension struct {
-	suffiksv1.Extension
-
-	sourceSpec []string
-	client     protogen.ExtensionClient
-	gclient    *grpc.ClientConn
-}
-
-func (e *extension) Client() protogen.ExtensionClient {
-	return e.client
-}
-
 type properties struct {
 	Properties map[string]any `json:"properties"`
 }
 
-func (e *extension) init() error {
+func (e *ProtoExtension) init() error {
 	props := &properties{}
 
-	if err := json.Unmarshal(e.Spec.OpenAPIV3Schema.Raw, props); err != nil {
+	if err := json.Unmarshal(e.Spec().OpenAPIV3Schema.Raw, props); err != nil {
 		return err
 	}
 	for key := range props.Properties {
 		e.sourceSpec = append(e.sourceSpec, key)
 	}
 	return nil
+}
+
+func contains[T comparable](arr []T, val T) bool {
+	for _, v := range arr {
+		if v == val {
+			return true
+		}
+	}
+	return false
 }

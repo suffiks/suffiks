@@ -1,4 +1,4 @@
-package base
+package controller
 
 import (
 	"bytes"
@@ -13,9 +13,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
-	v1 "k8s.io/api/core/v1"
+	"github.com/suffiks/suffiks/internal/extension"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -41,14 +40,14 @@ func (l *lockedList[T]) Slice() []T {
 }
 
 type Result struct {
-	Changeset *Changeset
+	Changeset *extension.Changeset
 
 	// Extensions contains the name of extensions that were ran during the operation.
 	Extensions lockedList[string]
 }
 
 type ExtManager interface {
-	ExtensionsFor(kind string) []extension
+	ExtensionsFor(kind string) []extension.Extension
 }
 
 type Object interface {
@@ -62,8 +61,8 @@ type responder interface {
 }
 
 type (
-	requestFunc   func(ctx context.Context, client protogen.ExtensionClient, in *protogen.SyncRequest) (responder, error)
-	shouldRunFunc func(e extension, cu *protogen.SyncRequest) bool
+	requestFunc   func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error)
+	shouldRunFunc func(e extension.Extension, cu *protogen.SyncRequest) bool
 )
 
 type FieldErrsWrapper field.ErrorList
@@ -93,33 +92,33 @@ func (c *ExtensionController) RegisterMetrics(reg prometheus.Registerer) error {
 }
 
 func (c *ExtensionController) Sync(ctx context.Context, v Object) (*Result, error) {
-	f := func(ctx context.Context, client protogen.ExtensionClient, in *protogen.SyncRequest) (responder, error) {
-		return client.Sync(ctx, in)
+	f := func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error) {
+		return ext.Sync(ctx, in)
 	}
 
-	return c.run(ctx, "sync", v, f, func(e extension, cu *protogen.SyncRequest) bool {
-		return e.Spec.Always || len(cu.Spec) > 0
+	return c.run(ctx, "sync", v, f, func(e extension.Extension, cu *protogen.SyncRequest) bool {
+		return e.Spec().Always || len(cu.Spec) > 0
 	})
 }
 
 func (c *ExtensionController) Delete(ctx context.Context, v Object) error {
-	f := func(ctx context.Context, client protogen.ExtensionClient, in *protogen.SyncRequest) (responder, error) {
-		return client.Delete(ctx, in)
+	f := func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error) {
+		return ext.Delete(ctx, in)
 	}
 
-	_, err := c.run(ctx, "delete", v, f, func(e extension, cu *protogen.SyncRequest) bool {
-		return e.Spec.Always || len(cu.Spec) > 0
+	_, err := c.run(ctx, "delete", v, f, func(e extension.Extension, cu *protogen.SyncRequest) bool {
+		return e.Spec().Always || len(cu.Spec) > 0
 	})
 	return err
 }
 
 func (c *ExtensionController) DeleteExtension(ctx context.Context, v Object, extensionName string) error {
-	f := func(ctx context.Context, client protogen.ExtensionClient, in *protogen.SyncRequest) (responder, error) {
-		return client.Delete(ctx, in)
+	f := func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error) {
+		return ext.Delete(ctx, in)
 	}
 
-	_, err := c.run(ctx, "delete", v, f, func(e extension, cu *protogen.SyncRequest) bool {
-		return e.Name == extensionName
+	_, err := c.run(ctx, "delete", v, f, func(e extension.Extension, cu *protogen.SyncRequest) bool {
+		return e.Name() == extensionName
 	})
 	return err
 }
@@ -134,7 +133,7 @@ func (c *ExtensionController) Default(ctx context.Context, obj Object) ([]*proto
 		wg       sync.WaitGroup
 		response []*protogen.DefaultResponse
 
-		v keyValue
+		v extension.KeyValue
 	)
 
 	if err := json.Unmarshal(obj.GetSpec(), &v); err != nil {
@@ -143,11 +142,11 @@ func (c *ExtensionController) Default(ctx context.Context, obj Object) ([]*proto
 
 	exts := c.manager.ExtensionsFor(obj.GetObjectKind().GroupVersionKind().Kind)
 	for _, ext := range exts {
-		if !ext.Spec.Webhooks.Defaulting {
+		if !ext.Spec().Webhooks.Defaulting {
 			continue
 		}
 
-		span.AddEvent("Default " + ext.Name)
+		span.AddEvent("Default " + ext.Name())
 		ext := ext
 		wg.Add(1)
 		go func() {
@@ -156,13 +155,13 @@ func (c *ExtensionController) Default(ctx context.Context, obj Object) ([]*proto
 			start := time.Now()
 			resp, err := c.defaulter(ctx, ext, obj, v)
 			if err != nil {
-				c.metrics.WithLabelValues("default", ext.Name, "failure").Observe(time.Since(start).Seconds())
+				c.metrics.WithLabelValues("default", ext.Name(), "failure").Observe(time.Since(start).Seconds())
 				lock.Lock()
 				errs = append(errs, err)
 				lock.Unlock()
 				return
 			}
-			c.metrics.WithLabelValues("default", ext.Name, "success").Observe(time.Since(start).Seconds())
+			c.metrics.WithLabelValues("default", ext.Name(), "success").Observe(time.Since(start).Seconds())
 
 			lock.Lock()
 			response = append(response, resp)
@@ -178,13 +177,13 @@ func (c *ExtensionController) Default(ctx context.Context, obj Object) ([]*proto
 	return response, nil
 }
 
-func (c *ExtensionController) defaulter(ctx context.Context, ext extension, obj Object, v keyValue) (*protogen.DefaultResponse, error) {
+func (c *ExtensionController) defaulter(ctx context.Context, ext extension.Extension, obj Object, v extension.KeyValue) (*protogen.DefaultResponse, error) {
 	req, err := createOrUpdateRequest(obj, v, ext)
 	if err != nil {
 		return nil, err
 	}
 
-	return ext.client.Default(ctx, req)
+	return ext.Default(ctx, req)
 }
 
 func (c *ExtensionController) Validate(ctx context.Context, typ protogen.ValidationType, newObject, oldObject Object) error {
@@ -197,7 +196,7 @@ func (c *ExtensionController) Validate(ctx context.Context, typ protogen.Validat
 		lock    sync.Mutex
 		wg      sync.WaitGroup
 
-		newV, oldV keyValue
+		newV, oldV extension.KeyValue
 		obj        Object
 	)
 
@@ -218,11 +217,11 @@ func (c *ExtensionController) Validate(ctx context.Context, typ protogen.Validat
 
 	exts := c.manager.ExtensionsFor(obj.GetObjectKind().GroupVersionKind().Kind)
 	for _, ext := range exts {
-		if !ext.Spec.Webhooks.Validation {
+		if !ext.Spec().Webhooks.Validation {
 			continue
 		}
 
-		span.AddEvent("Validate " + ext.Name)
+		span.AddEvent("Validate " + ext.Name())
 		ext := ext
 		wg.Add(1)
 		go func() {
@@ -235,14 +234,14 @@ func (c *ExtensionController) Validate(ctx context.Context, typ protogen.Validat
 					allErrs = append(allErrs, ferr...)
 					lock.Unlock()
 				} else {
-					c.metrics.WithLabelValues("validate", ext.Name, "failure").Observe(time.Since(start).Seconds())
+					c.metrics.WithLabelValues("validate", ext.Name(), "failure").Observe(time.Since(start).Seconds())
 					lock.Lock()
 					errs = append(errs, err)
 					lock.Unlock()
 					return
 				}
 			}
-			c.metrics.WithLabelValues("validate", ext.Name, "success").Observe(time.Since(start).Seconds())
+			c.metrics.WithLabelValues("validate", ext.Name(), "success").Observe(time.Since(start).Seconds())
 		}()
 	}
 
@@ -258,7 +257,7 @@ func (c *ExtensionController) Validate(ctx context.Context, typ protogen.Validat
 	return FieldErrsWrapper(allErrs)
 }
 
-func (c *ExtensionController) validate(ctx context.Context, typ protogen.ValidationType, ext extension, newO, oldO Object, newV, oldV keyValue) error {
+func (c *ExtensionController) validate(ctx context.Context, typ protogen.ValidationType, ext extension.Extension, newO, oldO Object, newV, oldV extension.KeyValue) error {
 	req := &protogen.ValidationRequest{
 		Type: typ,
 	}
@@ -282,7 +281,7 @@ func (c *ExtensionController) validate(ctx context.Context, typ protogen.Validat
 		return nil
 	}
 
-	resp, err := ext.client.Validate(ctx, req)
+	resp, err := ext.Validate(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -304,12 +303,12 @@ func (c *ExtensionController) validate(ctx context.Context, typ protogen.Validat
 func (c *ExtensionController) run(ctx context.Context, operation string, o Object, rf requestFunc, runFunc shouldRunFunc) (*Result, error) {
 	exts := c.manager.ExtensionsFor(o.GetObjectKind().GroupVersionKind().Kind)
 	result := &Result{
-		Changeset: &Changeset{},
+		Changeset: &extension.Changeset{},
 	}
 	errs := MultiError{}
 	wg := sync.WaitGroup{}
 
-	var v keyValue
+	var v extension.KeyValue
 	if err := json.Unmarshal(o.GetSpec(), &v); err != nil {
 		return nil, err
 	}
@@ -322,11 +321,11 @@ func (c *ExtensionController) run(ctx context.Context, operation string, o Objec
 			defer wg.Done()
 			start := time.Now()
 			if err := c.runExtension(ctx, ext, o, v, result, rf, runFunc); err != nil {
-				c.metrics.WithLabelValues(operation, ext.Name, "failure").Observe(time.Since(start).Seconds())
+				c.metrics.WithLabelValues(operation, ext.Name(), "failure").Observe(time.Since(start).Seconds())
 				errs = append(errs, err)
 				return
 			}
-			c.metrics.WithLabelValues(operation, ext.Name, "success").Observe(time.Since(start).Seconds())
+			c.metrics.WithLabelValues(operation, ext.Name(), "success").Observe(time.Since(start).Seconds())
 		}()
 	}
 
@@ -337,7 +336,7 @@ func (c *ExtensionController) run(ctx context.Context, operation string, o Objec
 	return result, nil
 }
 
-func (c *ExtensionController) runExtension(ctx context.Context, ext extension, o Object, v keyValue, result *Result, rf requestFunc, runFunc shouldRunFunc) (err error) {
+func (c *ExtensionController) runExtension(ctx context.Context, ext extension.Extension, o Object, v extension.KeyValue, result *Result, rf requestFunc, runFunc shouldRunFunc) (err error) {
 	changeset := result.Changeset
 
 	ctx, span := tracing.Start(ctx, "runExtension")
@@ -349,9 +348,9 @@ func (c *ExtensionController) runExtension(ctx context.Context, ext extension, o
 		return nil
 	}
 
-	result.Extensions.Add(ext.Name)
+	result.Extensions.Add(ext.Name())
 
-	stream, err := rf(ctx, ext.client, ur)
+	stream, err := rf(ctx, ext, ur)
 	if err != nil {
 		return err
 	}
@@ -366,60 +365,7 @@ func (c *ExtensionController) runExtension(ctx context.Context, ext extension, o
 			return err
 		}
 
-		err = func() error {
-			if r, ok := resp.OFResponse.(*protogen.Response_MergePatch); ok {
-				return changeset.AddMergePatch(r.MergePatch)
-			}
-
-			changeset.lock.Lock()
-			defer changeset.lock.Unlock()
-
-			switch r := resp.OFResponse.(type) {
-			case *protogen.Response_Env:
-				changeset.Environment = append(changeset.Environment, v1.EnvVar{
-					Name:  r.Env.Name,
-					Value: r.Env.Value,
-				})
-			case *protogen.Response_Annotation:
-				if changeset.Annotations == nil {
-					changeset.Annotations = map[string]string{}
-				}
-				changeset.Annotations[r.Annotation.Name] = r.Annotation.Value
-			case *protogen.Response_Label:
-				if changeset.Labels == nil {
-					changeset.Labels = map[string]string{}
-				}
-				changeset.Labels[r.Label.Name] = r.Label.Value
-			case *protogen.Response_EnvFrom:
-				switch r.EnvFrom.GetType() {
-				case protogen.EnvFromType_SECRET:
-					changeset.EnvFrom = append(changeset.EnvFrom, v1.EnvFromSource{
-						SecretRef: &v1.SecretEnvSource{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: r.EnvFrom.Name,
-							},
-							Optional: pointer.Bool(r.EnvFrom.Optional),
-						},
-					})
-				case protogen.EnvFromType_CONFIGMAP:
-					changeset.EnvFrom = append(changeset.EnvFrom, v1.EnvFromSource{
-						ConfigMapRef: &v1.ConfigMapEnvSource{
-							LocalObjectReference: v1.LocalObjectReference{
-								Name: r.EnvFrom.Name,
-							},
-							Optional: pointer.Bool(r.EnvFrom.Optional),
-						},
-					})
-				default:
-					return fmt.Errorf("unknown envfrom type: %q", r.EnvFrom.GetType())
-				}
-			default:
-				return fmt.Errorf("unexpected response type: %T", r)
-			}
-			return nil
-		}()
-
-		if err != nil {
+		if err := changeset.Add(resp); err != nil {
 			return err
 		}
 	}
@@ -443,7 +389,7 @@ func (errs MultiError) Error() string {
 	return buf.String()
 }
 
-func createOrUpdateRequest(o Object, v keyValue, ext extension) (*protogen.SyncRequest, error) {
+func createOrUpdateRequest(o Object, v extension.KeyValue, ext extension.Extension) (*protogen.SyncRequest, error) {
 	if v == nil {
 		return nil, nil
 	}
@@ -464,7 +410,7 @@ func createOrUpdateRequest(o Object, v keyValue, ext extension) (*protogen.SyncR
 
 	data := map[string]any{}
 	for key, val := range v {
-		if contains(ext.sourceSpec, key) {
+		if contains(ext.RootKeys(), key) {
 			data[key] = val
 		}
 	}

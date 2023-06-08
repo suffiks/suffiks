@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
+	controller "github.com/suffiks/suffiks/internal/controllers"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -66,7 +66,7 @@ func (i *IntegrationTester[Ext]) runTest(t *testing.T, client *fake.Clientset, t
 }
 
 type TestCase interface {
-	runTest(t *testing.T, ctrl *base.ExtensionController, client *fake.Clientset)
+	runTest(t *testing.T, ctrl *controller.ExtensionController, client *fake.Clientset)
 	name() string
 	existing() []runtime.Object
 }
@@ -95,7 +95,7 @@ func getName(obj runtime.Object) string {
 	return ns.GetName()
 }
 
-func fixObject(t *testing.T, obj base.Object) base.Object {
+func fixObject(t *testing.T, obj controller.Object) controller.Object {
 	if obj.GetObjectKind().GroupVersionKind().Kind == "" {
 		switch v := obj.(type) {
 		case *suffiksv1.Application:

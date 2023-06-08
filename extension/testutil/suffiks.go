@@ -7,10 +7,12 @@ import (
 
 	"github.com/suffiks/suffiks"
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/protogen"
+	controller "github.com/suffiks/suffiks/internal/controllers"
+	intexternal "github.com/suffiks/suffiks/internal/extension"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"sigs.k8s.io/yaml"
 )
@@ -18,7 +20,7 @@ import (
 type Suffiks[Ext any] struct {
 	extension extension.Extension[Ext]
 
-	ctrl       *base.ExtensionController
+	ctrl       *controller.ExtensionController
 	listener   *bufconn.Listener
 	grpcServer *grpc.Server
 }
@@ -27,8 +29,8 @@ func New[Ext any](ext extension.Extension[Ext], spec io.Reader) (*Suffiks[Ext], 
 	t := &Suffiks[Ext]{
 		extension: ext,
 	}
-	extMgr, err := base.NewExtensionManager(suffiks.CRDFiles, []grpc.DialOption{
-		grpc.WithInsecure(),
+	extMgr, err := intexternal.NewExtensionManager(suffiks.CRDFiles, []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(t.dialer),
 	})
 	if err != nil {
@@ -42,7 +44,7 @@ func New[Ext any](ext extension.Extension[Ext], spec io.Reader) (*Suffiks[Ext], 
 	}
 
 	extMgr.Add(extObj)
-	t.ctrl = base.NewExtensionController(extMgr)
+	t.ctrl = controller.NewExtensionController(extMgr)
 	return t, nil
 }
 

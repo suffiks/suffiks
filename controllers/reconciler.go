@@ -6,8 +6,9 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
+	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,9 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-type Reconciler[V base.Object] interface {
+type Reconciler[V Object] interface {
 	NewObject() V
-	CreateOrUpdate(ctx context.Context, obj V, changeset *base.Changeset) error
+	CreateOrUpdate(ctx context.Context, obj V, changeset *extension.Changeset) error
 	Delete(ctx context.Context, obj V) error
 	UpdateStatus(ctx context.Context, obj V, extensions []string) error
 	IsModified(ctx context.Context, obj V) (bool, error)
@@ -33,17 +34,17 @@ type Reconciler[V base.Object] interface {
 	Owns() []client.Object
 }
 
-type ReconcilerDefault[V base.Object] interface {
+type ReconcilerDefault[V Object] interface {
 	Default(ctx context.Context, obj V) error
 }
 
 const suffiksFinalizer = "suffiks.suffiks.com/finalizer"
 
-type ReconcilerWrapper[V base.Object] struct {
+type ReconcilerWrapper[V Object] struct {
 	client.Client
 
 	Child         Reconciler[V]
-	CRDController *base.ExtensionController
+	CRDController *controller.ExtensionController
 }
 
 func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

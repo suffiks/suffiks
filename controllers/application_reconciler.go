@@ -2,13 +2,11 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
+	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -46,7 +44,7 @@ type AppReconciler struct {
 
 func (a *AppReconciler) NewObject() *suffiksv1.Application { return &suffiksv1.Application{} }
 
-func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Application, changeset *base.Changeset) error {
+func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Application, changeset *extension.Changeset) error {
 	ctx, span := tracing.Start(ctx, "AppReconciler.CreateOrUpdate")
 	defer span.End()
 
@@ -61,7 +59,7 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 		return fmt.Errorf("unable to set controller reference: %w", err)
 	}
 
-	if err := a.modifyDeployment(depl, changeset); err != nil {
+	if err := changeset.Apply(depl); err != nil {
 		span.RecordError(err)
 		return fmt.Errorf("unable to modify Deployment: %w", err)
 	}
@@ -107,16 +105,6 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 			span.SetAttributes(attribute.String("action", "create svc"))
 		}
 	}
-
-	b, _ := json.MarshalIndent(depl, "", "  ")
-	fmt.Println("New deploy")
-
-	fmt.Println("Environment", len(changeset.Environment))
-	fmt.Println("Labels", len(changeset.Labels))
-	fmt.Println("Annotations", len(changeset.Annotations))
-	fmt.Println("EnvFrom", len(changeset.EnvFrom))
-	fmt.Println("MergePatch", len(changeset.MergePatch))
-	fmt.Println(string(b))
 
 	if err := a.Client.Create(ctx, depl); err != nil {
 		if errors.IsAlreadyExists(err) {
@@ -239,7 +227,7 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 	return &appsv1.Deployment{
 		ObjectMeta: a.objectMeta(app),
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32Ptr(1),
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -268,27 +256,4 @@ func (a *AppReconciler) objectMeta(app *suffiksv1.Application) metav1.ObjectMeta
 		Name:      app.Name,
 		Namespace: app.Namespace,
 	}
-}
-
-func (r *AppReconciler) modifyDeployment(depl *appsv1.Deployment, changeset *base.Changeset) error {
-	depl.Labels = mergeMaps(depl.Labels, changeset.Labels)
-	depl.Annotations = mergeMaps(depl.Annotations, changeset.Annotations)
-	depl.Spec.Template.Spec.Containers[0].Env = append(depl.Spec.Template.Spec.Containers[0].Env, changeset.Environment...)
-	depl.Spec.Template.Spec.Containers[0].EnvFrom = append(depl.Spec.Template.Spec.Containers[0].EnvFrom, changeset.EnvFrom...)
-
-	if len(changeset.MergePatch) > 0 {
-		b, err := json.Marshal(depl)
-		if err != nil {
-			return fmt.Errorf("modifyApp unmarshal: %w", err)
-		}
-		out, err := jsonpatch.MergePatch(b, changeset.MergePatch)
-		if err != nil {
-			return fmt.Errorf("modifyApp mergePatch: %w", err)
-		}
-		err = json.Unmarshal(out, depl)
-		if err != nil {
-			return fmt.Errorf("modifyApp unmarshal: %w", err)
-		}
-	}
-	return nil
 }

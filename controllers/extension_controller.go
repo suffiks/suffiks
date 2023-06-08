@@ -5,8 +5,8 @@ import (
 	goerrors "errors"
 
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
-	suffiksruntime "github.com/suffiks/suffiks/base/runtime"
+	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/specgen"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +39,7 @@ var crds = map[string]crdDefinition{
 type ExtensionReconciler struct {
 	client.Client
 	Scheme     *runtime.Scheme
-	CRDManager *base.ExtensionManager
+	CRDManager *extension.ExtensionManager
 	KubeConfig *rest.Config
 
 	clientSet apiclient.Interface
@@ -70,7 +70,7 @@ func (r *ExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(ext, finalizer) {
 			if err := r.CRDManager.Add(*(ext.DeepCopy())); err != nil {
-				if goerrors.Is(err, &suffiksruntime.AlreadyDefinedError{}) {
+				if goerrors.Is(err, &specgen.AlreadyDefinedError{}) {
 					log.Info("CRD already exists, skipping", "error", err)
 				} else {
 					log.Error(err, "unable to add extension manifest")

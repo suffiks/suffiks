@@ -7,7 +7,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/suffiks/suffiks/base"
+	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/extension"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
@@ -16,15 +17,15 @@ import (
 type SyncTest struct {
 	Name      string
 	Existing  []runtime.Object
-	Object    base.Object
+	Object    controller.Object
 	Expected  []runtime.Object
 	ErrCheck  func(t *testing.T, err error)
-	Changeset *base.Changeset
+	Changeset *extension.Changeset
 }
 
 func (s SyncTest) name() string               { return s.Name }
 func (s SyncTest) existing() []runtime.Object { return s.Existing }
-func (s SyncTest) runTest(t *testing.T, ctrl *base.ExtensionController, client *fake.Clientset) {
+func (s SyncTest) runTest(t *testing.T, ctrl *controller.ExtensionController, client *fake.Clientset) {
 	t.Helper()
 
 	cs, err := ctrl.Sync(context.Background(), fixObject(t, s.Object))
@@ -36,8 +37,8 @@ func (s SyncTest) runTest(t *testing.T, ctrl *base.ExtensionController, client *
 		}
 	}
 
-	if s.Changeset != nil && !cmp.Equal(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(base.Changeset{})) {
-		t.Error(cmp.Diff(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(base.Changeset{})))
+	if s.Changeset != nil && !cmp.Equal(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(extension.Changeset{})) {
+		t.Error(cmp.Diff(s.Changeset, cs.Changeset, cmpopts.IgnoreUnexported(extension.Changeset{})))
 	}
 
 	for _, exp := range s.Expected {

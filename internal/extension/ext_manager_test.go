@@ -1,4 +1,4 @@
-package base
+package extension
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -27,7 +28,7 @@ func TestNewExtensionManager(t *testing.T) {
 	listener := &mockGRPCListener{}
 	mgr, err := NewExtensionManager(files, []grpc.DialOption{
 		grpc.WithContextDialer(listener.Dialer),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -2,14 +2,13 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
-	jsonpatch "github.com/evanphx/json-patch/v5"
 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
+	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -56,7 +55,7 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 	span.SetAttributes(attribute.String("name", v.GetName()), attribute.String("namespace", v.GetNamespace()))
 
 	if err := r.CRDController.Validate(ctx, typ, newV, oldV); err != nil {
-		if ferr, ok := err.(base.FieldErrsWrapper); ok {
+		if ferr, ok := err.(controller.FieldErrsWrapper); ok {
 			return apierrors.NewInvalid(
 				v.GetObjectKind().GroupVersionKind().GroupKind(),
 				v.GetName(),
@@ -98,14 +97,14 @@ func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) 
 		return fmt.Errorf("Default crdmanager: %w", err)
 	}
 
-	changeset := &base.Changeset{}
+	changeset := &extension.Changeset{}
 	for _, d := range defaults {
 		if err := changeset.AddMergePatch(d.GetSpec()); err != nil {
 			return err
 		}
 	}
 
-	return r.applyChangeset(v, changeset)
+	return changeset.Apply(v)
 }
 
 func (r *ReconcilerWrapper[V]) ValidateCreate(ctx context.Context, obj runtime.Object) error {
@@ -131,25 +130,4 @@ func (r *ReconcilerWrapper[V]) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		// 	return otel.GetTextMapPropagator().Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		// }).
 		Complete()
-}
-
-func (r *ReconcilerWrapper[V]) applyChangeset(v V, changeset *base.Changeset) error {
-	v.SetLabels(mergeMaps(v.GetLabels(), changeset.Labels))
-	v.SetAnnotations(mergeMaps(v.GetAnnotations(), changeset.Annotations))
-
-	if len(changeset.MergePatch) > 0 {
-		b, err := json.Marshal(v)
-		if err != nil {
-			return fmt.Errorf("applyChangeset unmarshal: %w", err)
-		}
-		out, err := jsonpatch.MergePatch(b, changeset.MergePatch)
-		if err != nil {
-			return fmt.Errorf("applyChangeset mergePatch: %w", err)
-		}
-		err = json.Unmarshal(out, v)
-		if err != nil {
-			return fmt.Errorf("applyChangeset unmarshal: %w", err)
-		}
-	}
-	return nil
 }

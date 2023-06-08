@@ -122,7 +122,6 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 ##@ extensions
 gen-extensions:
-	mkdir -p extension/protogen
 	protoc \
 		-I extension/proto/thirdparty \
 		-I extension/proto/ \
@@ -134,7 +133,10 @@ gen-extensions:
 		--go_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=k8s.io/apimachinery/pkg/util/intstr \
 		./extension/proto/extension.proto \
 		--go_out=. \
-		--go-grpc_out=.
+		--go-grpc_out=. \
+		--plugin=protoc-gen-as=./node_modules/.bin/as-proto-gen \
+		--as_out=./extension/as
+
 
 ##@ Build Dependencies
 

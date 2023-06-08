@@ -1,0 +1,9 @@
+{
+  "name": "suffiks",
+  "version": "1.0.0",
+  "description": "Just for GRPC dependency",
+  "license": "MIT",
+  "devDependencies": {
+    "as-proto-gen": "^1.3.0"
+  }
+}

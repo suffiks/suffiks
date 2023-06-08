@@ -34,7 +34,7 @@ func NewExtensionClient(cc grpc.ClientConnInterface) ExtensionClient {
 }
 
 func (c *extensionClient) Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_SyncClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Extension_ServiceDesc.Streams[0], "/Extension/Sync", opts...)
+	stream, err := c.cc.NewStream(ctx, &Extension_ServiceDesc.Streams[0], "/extension.Extension/Sync", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (x *extensionSyncClient) Recv() (*Response, error) {
 }
 
 func (c *extensionClient) Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_DeleteClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Extension_ServiceDesc.Streams[1], "/Extension/Delete", opts...)
+	stream, err := c.cc.NewStream(ctx, &Extension_ServiceDesc.Streams[1], "/extension.Extension/Delete", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (x *extensionDeleteClient) Recv() (*Response, error) {
 
 func (c *extensionClient) Default(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DefaultResponse, error) {
 	out := new(DefaultResponse)
-	err := c.cc.Invoke(ctx, "/Extension/Default", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/extension.Extension/Default", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (c *extensionClient) Default(ctx context.Context, in *SyncRequest, opts ...
 
 func (c *extensionClient) Validate(ctx context.Context, in *ValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error) {
 	out := new(ValidationResponse)
-	err := c.cc.Invoke(ctx, "/Extension/Validate", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/extension.Extension/Validate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (c *extensionClient) Validate(ctx context.Context, in *ValidationRequest, o
 
 func (c *extensionClient) Documentation(ctx context.Context, in *DocumentationRequest, opts ...grpc.CallOption) (*DocumentationResponse, error) {
 	out := new(DocumentationResponse)
-	err := c.cc.Invoke(ctx, "/Extension/Documentation", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/extension.Extension/Documentation", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func _Extension_Default_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Extension/Default",
+		FullMethod: "/extension.Extension/Default",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ExtensionServer).Default(ctx, req.(*SyncRequest))
@@ -238,7 +238,7 @@ func _Extension_Validate_Handler(srv interface{}, ctx context.Context, dec func(
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Extension/Validate",
+		FullMethod: "/extension.Extension/Validate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ExtensionServer).Validate(ctx, req.(*ValidationRequest))
@@ -256,7 +256,7 @@ func _Extension_Documentation_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Extension/Documentation",
+		FullMethod: "/extension.Extension/Documentation",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ExtensionServer).Documentation(ctx, req.(*DocumentationRequest))
@@ -268,7 +268,7 @@ func _Extension_Documentation_Handler(srv interface{}, ctx context.Context, dec 
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var Extension_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Extension",
+	ServiceName: "extension.Extension",
 	HandlerType: (*ExtensionServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

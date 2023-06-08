@@ -11,6 +11,7 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/perimeterx/marshmallow v1.1.4
 	github.com/prometheus/client_golang v1.14.0
+	github.com/tetratelabs/wazero v1.1.0
 	github.com/urfave/cli/v2 v2.24.4
 	github.com/yuin/goldmark v1.5.4
 	github.com/yuin/goldmark-meta v1.1.0
@@ -25,7 +26,7 @@ require (
 	golang.org/x/sync v0.1.0
 	golang.org/x/tools v0.6.0
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.30.0
 	k8s.io/api v0.26.1
 	k8s.io/apiextensions-apiserver v0.26.1
 	k8s.io/apimachinery v0.26.1

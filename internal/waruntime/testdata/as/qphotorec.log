@@ -1,0 +1,12 @@
+en
+translator not installed
+
+
+Wed May 31 22:44:02 2023
+PhotoRec 7.2-WIP, Data Recovery Utility, March 2022
+Christophe GRENIER <grenier@cgsecurity.org>
+https://www.cgsecurity.org
+OS: Linux, kernel 6.3.4-arch1-1 (#1 SMP PREEMPT_DYNAMIC Wed, 24 May 2023 17:44:00 +0000) x86_64
+Compiler: GCC 13.1
+ext2fs lib: 1.47.0, ntfs lib: libntfs-3g, ewf lib: 20140608, libjpeg: libjpeg-turbo-2.1.5.1
+QPhotoRec exited normally.

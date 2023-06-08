@@ -15,7 +15,6 @@ import (
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type lockedList[T comparable] struct {
@@ -48,12 +47,6 @@ type Result struct {
 
 type ExtManager interface {
 	ExtensionsFor(kind string) []extension.Extension
-}
-
-type Object interface {
-	client.Object
-
-	GetSpec() []byte
 }
 
 type responder interface {

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/specgen"
 	"google.golang.org/grpc"

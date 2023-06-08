@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/controller"
 	"github.com/suffiks/suffiks/internal/extension"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"

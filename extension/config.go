@@ -3,7 +3,7 @@ package extension
 import (
 	"os"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 

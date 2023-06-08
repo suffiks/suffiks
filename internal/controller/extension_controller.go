@@ -1,10 +1,10 @@
-package controllers
+package controller
 
 import (
 	"context"
 	goerrors "errors"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/internal/extension"
 	"github.com/suffiks/suffiks/internal/specgen"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"

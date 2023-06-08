@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -76,19 +77,19 @@ func (r *Extension) validateSpecOpenAPIV3Schema() *field.Error {
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *Extension) ValidateCreate() error {
+func (r *Extension) ValidateCreate() (admission.Warnings, error) {
 	extensionlog.Info("validate create", "name", r.Name)
-	return r.validateExtension()
+	return nil, r.validateExtension()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *Extension) ValidateUpdate(old runtime.Object) error {
+func (r *Extension) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	extensionlog.Info("validate update", "name", r.Name)
-	return r.validateExtension()
+	return nil, r.validateExtension()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *Extension) ValidateDelete() error {
+func (r *Extension) ValidateDelete() (admission.Warnings, error) {
 	// NOT IN USE
-	return nil
+	return nil, nil
 }

@@ -6,7 +6,7 @@ import (
 	"context"
 	time "time"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	versioned "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned"
 	internalinterfaces "github.com/suffiks/suffiks/pkg/client/generated/informers/externalversions/internalinterfaces"
 	v1 "github.com/suffiks/suffiks/pkg/client/generated/listers/suffiks/v1"

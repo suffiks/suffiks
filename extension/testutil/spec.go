@@ -1,7 +1,7 @@
 package testutil
 
 import (
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 )
 
 func AppSpec(wellKnown *suffiksv1.ApplicationSpec, fields map[string]any) suffiksv1.ApplicationSpec {

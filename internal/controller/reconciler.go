@@ -1,4 +1,4 @@
-package controllers
+package controller
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/suffiks/suffiks/base/tracing"
-	controller "github.com/suffiks/suffiks/internal/controllers"
 	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -17,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logr "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
 type Reconciler[V Object] interface {
@@ -44,7 +42,7 @@ type ReconcilerWrapper[V Object] struct {
 	client.Client
 
 	Child         Reconciler[V]
-	CRDController *controller.ExtensionController
+	CRDController *ExtensionController
 }
 
 func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -142,7 +140,7 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReconcilerWrapper[V]) SetupWithManager(mgr ctrl.Manager) (err error) {
 	bldr := ctrl.NewControllerManagedBy(mgr).
-		Watches(&source.Kind{Type: r.Child.NewObject()}, &handler.EnqueueRequestForObject{}).
+		Watches(r.Child.NewObject(), &handler.EnqueueRequestForObject{}).
 		For(r.Child.NewObject(), builder.OnlyMetadata)
 
 	for _, o := range r.Child.Owns() {

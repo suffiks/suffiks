@@ -124,16 +124,16 @@ func TestExtension_ValidateCreate(t *testing.T) {
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			if err := tt.ext.ValidateCreate(); (err != nil) != tt.wantErr {
+			if _, err := tt.ext.ValidateCreate(); (err != nil) != tt.wantErr {
 				t.Errorf("Extension.ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if err := tt.ext.ValidateUpdate(&Extension{}); (err != nil) != tt.wantErr {
+			if _, err := tt.ext.ValidateUpdate(&Extension{}); (err != nil) != tt.wantErr {
 				t.Errorf("Extension.ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 
-	if err := (&Extension{}).ValidateDelete(); err != nil {
+	if _, err := (&Extension{}).ValidateDelete(); err != nil {
 		t.Errorf("Extension.ValidateDelete() error = %v", err)
 	}
 }

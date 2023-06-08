@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	controller "github.com/suffiks/suffiks/internal/controllers"
+	"github.com/suffiks/suffiks/internal/controller"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"

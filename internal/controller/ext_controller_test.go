@@ -11,7 +11,7 @@ package controller
 // 	"github.com/google/go-cmp/cmp"
 // 	"github.com/google/go-cmp/cmp/cmpopts"
 // 	"github.com/prometheus/client_golang/prometheus"
-// 	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+// 	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 // 	"github.com/suffiks/suffiks/extension/protogen"
 // 	"google.golang.org/grpc"
 // 	corev1 "k8s.io/api/core/v1"

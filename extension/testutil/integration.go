@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension"
-	controller "github.com/suffiks/suffiks/internal/controllers"
+	controller "github.com/suffiks/suffiks/internal/controller"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )

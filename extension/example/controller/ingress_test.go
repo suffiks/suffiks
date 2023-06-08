@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	base "github.com/suffiks/suffiks/apis/suffiks/v1"
+	base "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/testutil"
 	netv1 "k8s.io/api/networking/v1"

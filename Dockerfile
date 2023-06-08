@@ -15,15 +15,16 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build std
 # Copy the go source
 COPY embeds.go embeds.go
 COPY cmd/suffiks cmd/suffiks
-COPY apis/ apis/
+COPY api/ api/
 COPY base/ base/
 COPY controllers/ controllers/
 COPY docparser/ docparser/
 COPY docs/ docs/
 COPY extension/ extension/
 COPY config/crd/bases/ config/crd/bases/
+COPY internal/ internal/
 # Build
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -o manager ./cmd/suffiks/main.go
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o manager ./cmd/suffiks/main.go
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details

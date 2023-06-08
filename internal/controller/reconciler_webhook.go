@@ -1,13 +1,12 @@
-package controllers
+package controller
 
 import (
 	"context"
 	"fmt"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
-	controller "github.com/suffiks/suffiks/internal/controllers"
 	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,7 +19,7 @@ import (
 
 var _ admission.CustomValidator = &ReconcilerWrapper[*suffiksv1.Application]{}
 
-func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.ValidationType, newObj, oldObj runtime.Object) error {
+func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.ValidationType, newObj, oldObj runtime.Object) (admission.Warnings, error) {
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
 		kind = fmt.Sprintf("%T", r.Child.NewObject())
@@ -55,8 +54,8 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 	span.SetAttributes(attribute.String("name", v.GetName()), attribute.String("namespace", v.GetNamespace()))
 
 	if err := r.CRDController.Validate(ctx, typ, newV, oldV); err != nil {
-		if ferr, ok := err.(controller.FieldErrsWrapper); ok {
-			return apierrors.NewInvalid(
+		if ferr, ok := err.(FieldErrsWrapper); ok {
+			return nil, apierrors.NewInvalid(
 				v.GetObjectKind().GroupVersionKind().GroupKind(),
 				v.GetName(),
 				field.ErrorList(ferr),
@@ -65,10 +64,10 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 
 		log.Error(err, "extension validation error")
 		span.RecordError(err)
-		return apierrors.NewInternalError(err)
+		return nil, apierrors.NewInternalError(err)
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) error {
@@ -107,15 +106,15 @@ func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) 
 	return changeset.Apply(v)
 }
 
-func (r *ReconcilerWrapper[V]) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (r *ReconcilerWrapper[V]) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return r.validate(ctx, protogen.ValidationType_CREATE, obj, nil)
 }
 
-func (r *ReconcilerWrapper[V]) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (r *ReconcilerWrapper[V]) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	return r.validate(ctx, protogen.ValidationType_UPDATE, newObj, oldObj)
 }
 
-func (r *ReconcilerWrapper[V]) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+func (r *ReconcilerWrapper[V]) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	return r.validate(ctx, protogen.ValidationType_DELETE, nil, obj)
 }
 

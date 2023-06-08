@@ -41,12 +41,12 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=config/crd/bases
-	$(CONTROLLER_GEN) rbac:roleName=manager-role webhook paths="./controllers/..."
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role webhook paths="./internal/controller/..."
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object paths="./apis/..."
+	$(CONTROLLER_GEN) object paths="./api/..."
 	$(CONTROLLER_GEN) object paths="./docparser/..."
 
 .PHONY: fmt
@@ -180,11 +180,11 @@ clientset: TMPDIR := $(shell mktemp -d)
 clientset: ## Generate clientset
 	go run k8s.io/code-generator/cmd/client-gen \
 		--clientset-name versioned \
-		--input-base=github.com/suffiks/suffiks/apis --input-dirs=. --input="suffiks/v1" \
+		--input-base=github.com/suffiks/suffiks/api --input-dirs=. --input="suffiks/v1" \
 		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR) \
 		--go-header-file hack/boilerplate.go.txt
 	cp -r $(TMPDIR)/github.com/suffiks/suffiks/pkg .
 # Application is special, so reference the base package
-	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/application.go
-	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake/fake_application.go
+	sed -i 's|github.com/suffiks/suffiks/api/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/application.go
+	sed -i 's|github.com/suffiks/suffiks/api/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake/fake_application.go
 	rm -rf $(TMPDIR)

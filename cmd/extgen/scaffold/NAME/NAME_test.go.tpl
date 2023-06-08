@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	v1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	v1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/testutil"

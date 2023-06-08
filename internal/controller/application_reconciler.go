@@ -1,10 +1,10 @@
-package controllers
+package controller
 
 import (
 	"context"
 	"fmt"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/otel/attribute"

@@ -6,7 +6,7 @@ import (
 	"context"
 	"time"
 
-	v1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	v1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	scheme "github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"

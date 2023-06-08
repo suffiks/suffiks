@@ -15,11 +15,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks"
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/base/tracing"
-	"github.com/suffiks/suffiks/controllers"
 	"github.com/suffiks/suffiks/docparser"
-	controller "github.com/suffiks/suffiks/internal/controllers"
+	controller "github.com/suffiks/suffiks/internal/controller"
 	"github.com/suffiks/suffiks/internal/extension"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -121,7 +120,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	extRec := &controllers.ExtensionReconciler{
+	extRec := &controller.ExtensionReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		KubeConfig: cfg,
@@ -132,9 +131,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	appRec := &controllers.ReconcilerWrapper[*suffiksv1.Application]{
+	appRec := &controller.ReconcilerWrapper[*suffiksv1.Application]{
 		Client: mgr.GetClient(),
-		Child: &controllers.AppReconciler{
+		Child: &controller.AppReconciler{
 			Scheme:   mgr.GetScheme(),
 			Client:   mgr.GetClient(),
 			Defaults: ctrlConfig.ApplicationDefaults,

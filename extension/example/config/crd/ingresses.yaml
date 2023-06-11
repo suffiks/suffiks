@@ -5,8 +5,9 @@ metadata:
   name: ingresses
 spec:
   controller:
-    namespace: ""
-    service: ""
+    grpc:
+      namespace: ""
+      service: ""
   openAPIV3Schema:
     properties:
       ingresses:

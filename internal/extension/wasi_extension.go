@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 
@@ -77,7 +78,15 @@ func (w *WASI) init(files map[string][]byte) error {
 		w.sourceSpec = append(w.sourceSpec, key)
 	}
 
-	return w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI])
+	err := w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI])
+	if err != nil {
+		return fmt.Errorf("WASI.init: error loading wasi module: %w", err)
+	}
+
+	if err := w.initDocs(files); err != nil {
+		return fmt.Errorf("WASI.init: error loading docs: %w", err)
+	}
+	return nil
 }
 
 func (w *WASI) initDocs(files map[string][]byte) error {

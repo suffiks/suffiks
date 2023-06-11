@@ -36,6 +36,8 @@ func NewIntegrationTester[Ext any](spec io.Reader, extSetup SetupExtension[Ext])
 }
 
 func (i *IntegrationTester[Ext]) Run(t *testing.T, tests ...TestCase) {
+	t.Helper()
+
 	existing := []runtime.Object{}
 	for _, test := range tests {
 		existing = append(existing, test.existing()...)

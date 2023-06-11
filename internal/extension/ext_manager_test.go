@@ -51,6 +51,9 @@ func TestNewExtensionManager(t *testing.T) {
 	ext := suffiksv1.Extension{
 		Spec: suffiksv1.ExtensionSpec{
 			Targets: []suffiksv1.Target{"Application"},
+			Controller: suffiksv1.ControllerSpec{
+				GRPC: &suffiksv1.ExtensionGRPCController{},
+			},
 			OpenAPIV3Schema: runtime.RawExtension{
 				Raw: []byte(`{"type":"object","properties":{"foo":{"type":"string"}}}`),
 			},

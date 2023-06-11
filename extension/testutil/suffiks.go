@@ -10,7 +10,7 @@ import (
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/controller"
-	intexternal "github.com/suffiks/suffiks/internal/extension"
+	intextension "github.com/suffiks/suffiks/internal/extension"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"
@@ -29,10 +29,10 @@ func New[Ext any](ext extension.Extension[Ext], spec io.Reader) (*Suffiks[Ext], 
 	t := &Suffiks[Ext]{
 		extension: ext,
 	}
-	extMgr, err := intexternal.NewExtensionManager(context.Background(), suffiks.CRDFiles, []grpc.DialOption{
+	extMgr, err := intextension.NewExtensionManager(context.Background(), suffiks.CRDFiles, nil, intextension.WithGRPCOptions(
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(t.dialer),
-	})
+	))
 	if err != nil {
 		return nil, err
 	}

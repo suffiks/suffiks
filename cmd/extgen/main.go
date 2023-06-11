@@ -65,7 +65,7 @@ var crdGen = &cli.Command{
 		&cli.StringFlag{
 			Name:  "source",
 			Usage: "Source directory where the types are defined",
-			Value: "./controllers",
+			Value: "./controller",
 		},
 	},
 
@@ -134,6 +134,9 @@ var crdGen = &cli.Command{
 					Name: strings.ToLower(k.Name),
 				},
 				Spec: suffiksv1.ExtensionSpec{
+					Controller: suffiksv1.ControllerSpec{
+						GRPC: &suffiksv1.ExtensionGRPCController{},
+					},
 					OpenAPIV3Schema: runtime.RawExtension{
 						Raw: b,
 					},

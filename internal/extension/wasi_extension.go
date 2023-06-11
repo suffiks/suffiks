@@ -14,10 +14,12 @@ import (
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension/oci"
 	"github.com/suffiks/suffiks/internal/waruntime"
+	"k8s.io/client-go/dynamic"
 )
 
 type WASI struct {
 	suffiksv1.Extension
+	dynamicClient dynamic.Interface
 
 	controller *waruntime.Controller
 	pages      [][]byte
@@ -26,10 +28,12 @@ type WASI struct {
 	instance   *waruntime.Runner
 }
 
-func NewWASI(ext suffiksv1.Extension) (*WASI, error) {
+func NewWASI(ext suffiksv1.Extension, controller *waruntime.Controller, dynClient dynamic.Interface) *WASI {
 	return &WASI{
-		Extension: ext,
-	}, nil
+		Extension:     ext,
+		dynamicClient: dynClient,
+		controller:    controller,
+	}
 }
 
 func (w *WASI) Name() string                  { return w.Extension.Name }
@@ -41,13 +45,25 @@ func (w *WASI) Close(ctx context.Context) error {
 }
 
 func (w *WASI) Default(ctx context.Context, in *protogen.SyncRequest) (*protogen.DefaultResponse, error) {
+	var err error
+	w.instance, err = w.controller.NewRunner(ctx, w.Name(), w.dynamicClient)
+	if err != nil {
+		return nil, fmt.Errorf("WASI.Default: error creating new runner: %w", err)
+	}
+
 	return w.instance.Defaulting(ctx, in)
 }
 
 func (w *WASI) Validate(ctx context.Context, in *protogen.ValidationRequest) (*protogen.ValidationResponse, error) {
+	var err error
+	w.instance, err = w.controller.NewRunner(ctx, w.Name(), w.dynamicClient)
+	if err != nil {
+		return nil, fmt.Errorf("WASI.Validate: error creating new runner: %w", err)
+	}
+
 	errs, err := w.instance.Validate(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("WASI.Validate: error validating: %w", err)
 	}
 
 	return &protogen.ValidationResponse{
@@ -56,10 +72,22 @@ func (w *WASI) Validate(ctx context.Context, in *protogen.ValidationRequest) (*p
 }
 
 func (w *WASI) Sync(ctx context.Context, in *protogen.SyncRequest) (StreamResponse, error) {
+	var err error
+	w.instance, err = w.controller.NewRunner(ctx, w.Name(), w.dynamicClient)
+	if err != nil {
+		return nil, fmt.Errorf("WASI.Sync: error creating new runner: %w", err)
+	}
+
 	return w.instance.Sync(ctx, in)
 }
 
 func (w *WASI) Delete(ctx context.Context, in *protogen.SyncRequest) (StreamResponse, error) {
+	var err error
+	w.instance, err = w.controller.NewRunner(ctx, w.Name(), w.dynamicClient)
+	if err != nil {
+		return nil, fmt.Errorf("WASI.Delete: error creating new runner: %w", err)
+	}
+
 	return nil, w.instance.Delete(ctx, in)
 }
 

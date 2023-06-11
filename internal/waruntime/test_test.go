@@ -93,14 +93,16 @@ func TestRun(t *testing.T) {
 	}
 
 	expectedSpec := map[string]any{
-		"ingresses": []any{
-			map[string]any{
-				"host":  "suffiks",
-				"paths": []any{"//"},
-			},
-			map[string]any{
-				"host":  "suffiks.com",
-				"paths": []any{"test"},
+		"spec": map[string]any{
+			"ingresses": []any{
+				map[string]any{
+					"host":  "suffiks",
+					"paths": []any{"/"},
+				},
+				map[string]any{
+					"host":  "suffiks.com",
+					"paths": []any{"test"},
+				},
 			},
 		},
 	}

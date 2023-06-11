@@ -61,7 +61,12 @@ type (
 type FieldErrsWrapper field.ErrorList
 
 func (f FieldErrsWrapper) Error() string {
-	return "Field errors"
+	sb := strings.Builder{}
+	sb.WriteString("Field errors:\n")
+	for _, err := range f {
+		sb.WriteString(fmt.Sprintf(" - %s\n", err.Error()))
+	}
+	return sb.String()
 }
 
 type ExtensionController struct {
@@ -393,7 +398,7 @@ func createOrUpdateRequest(o Object, v extension.KeyValue, ext extension.Extensi
 			Kind:        ok.GroupVersionKind().Kind,
 			Name:        o.GetName(),
 			Namespace:   o.GetNamespace(),
-			ApiVersion:  ok.GroupVersionKind().Version,
+			ApiVersion:  ok.GroupVersionKind().GroupVersion().String(),
 			Uid:         string(o.GetUID()),
 			Labels:      o.GetLabels(),
 			Annotations: o.GetAnnotations(),

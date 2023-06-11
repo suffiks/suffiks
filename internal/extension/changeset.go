@@ -113,6 +113,7 @@ func (c *Changeset) AddMergePatch(patch []byte) error {
 		}
 		c.mergePatch = combined
 	}
+
 	return nil
 }
 

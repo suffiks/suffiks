@@ -24,16 +24,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote/retry"
 )
 
-func New() *cli.Command {
-	return &cli.Command{
-		Name: "wasi",
-		Subcommands: []*cli.Command{
-			publish(),
-			download(),
-		},
-	}
-}
-
 func publish() *cli.Command {
 	return &cli.Command{
 		Name:        "publish",

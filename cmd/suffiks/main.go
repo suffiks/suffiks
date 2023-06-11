@@ -12,6 +12,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/go-logr/logr"
@@ -113,7 +114,13 @@ func main() {
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	}
 
-	crdMgr, err := extension.NewExtensionManager(ctx, suffiks.CRDFiles, grpcOptions)
+	dynClient, err := dynamic.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create dynamic client")
+		os.Exit(1)
+	}
+
+	crdMgr, err := extension.NewExtensionManager(ctx, suffiks.CRDFiles, dynClient, extension.WithGRPCOptions(grpcOptions...))
 	if err != nil {
 		setupLog.Error(err, "unable to create CRD manager")
 		os.Exit(1)

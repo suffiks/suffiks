@@ -16,13 +16,32 @@ import (
 	"github.com/suffiks/suffiks/internal/waruntime"
 	"google.golang.org/grpc"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/client-go/dynamic"
 )
 
 type KeyValue map[string]any
 
+type Option func(*ExtensionManager)
+
+type WASILoader func(ctx context.Context, image, tag string) (map[string][]byte, error)
+
+func WithWASILoader(loader WASILoader) Option {
+	return func(mgr *ExtensionManager) {
+		mgr.wasiLoader = loader
+	}
+}
+
+func WithGRPCOptions(opts ...grpc.DialOption) Option {
+	return func(mgr *ExtensionManager) {
+		mgr.grpcOptions = opts
+	}
+}
+
 type ExtensionManager struct {
 	grpcOptions    []grpc.DialOption
 	wasiController *waruntime.Controller
+	wasiLoader     WASILoader
+	dynamicClient  dynamic.Interface
 
 	specLock sync.Mutex
 	spec     map[suffiksv1.Target]*specgen.Generator
@@ -32,14 +51,20 @@ type ExtensionManager struct {
 }
 
 // NewExtensionManager creates a new ExtensionManager. It reads all .yaml files from the provided fs.FS as base types.
-func NewExtensionManager(ctx context.Context, files fs.FS, grpcOptions []grpc.DialOption) (*ExtensionManager, error) {
+func NewExtensionManager(ctx context.Context, files fs.FS, dynClient dynamic.Interface, opts ...Option) (*ExtensionManager, error) {
 	mgr := &ExtensionManager{
-		grpcOptions:    grpcOptions,
 		wasiController: waruntime.New(ctx),
+		wasiLoader:     oci.Get,
+		dynamicClient:  dynClient,
 
 		spec:       map[suffiksv1.Target]*specgen.Generator{},
 		extensions: map[string]Extension{},
 	}
+
+	for _, opt := range opts {
+		opt(mgr)
+	}
+
 	err := fs.WalkDir(files, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -123,7 +148,7 @@ func (c *ExtensionManager) addGRPC(ext suffiksv1.Extension, target suffiksv1.Tar
 func (c *ExtensionManager) addWASI(ext suffiksv1.Extension, target suffiksv1.Target) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	files, err := oci.Get(ctx, ext.Spec.Controller.WASI.Image, ext.Spec.Controller.WASI.Tag)
+	files, err := c.wasiLoader(ctx, ext.Spec.Controller.WASI.Image, ext.Spec.Controller.WASI.Tag)
 	if err != nil {
 		return fmt.Errorf("ExtensionManager.add: oci get error: %w", err)
 	}
@@ -143,10 +168,11 @@ func (c *ExtensionManager) addWASI(ext suffiksv1.Extension, target suffiksv1.Tar
 	c.rwlock.Lock()
 	defer c.rwlock.Unlock()
 
-	wext := &WASI{
-		Extension:  ext,
-		controller: c.wasiController,
-	}
+	wext := NewWASI(
+		ext,
+		c.wasiController,
+		c.dynamicClient,
+	)
 	if err := wext.init(files); err != nil {
 		return err
 	}

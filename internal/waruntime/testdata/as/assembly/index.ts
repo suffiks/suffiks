@@ -41,6 +41,12 @@ class Extension {
   ingresses!: Ingress[];
 }
 
+// @ts-ignore decorators are valid here
+@json
+class SpecWrapper {
+  spec!: Extension;
+}
+
 export function Validate(vt: i32): void {
   const ext = Suffiks.getSpec<Extension>();
 
@@ -73,12 +79,14 @@ export function Defaulting(): u32 {
 
   ext.ingresses.forEach((ingress, i) => {
     if (ingress.getPaths().length == 0) {
-      ingress.paths = ["//"];
+      ingress.paths = ["/"];
     }
   });
 
-  const res = Suffiks.defaultingResponse(ext);
-  console.log("Result: " + res.toString());
+  const spec = new SpecWrapper();
+  spec.spec = ext;
+  const res = Suffiks.defaultingResponse(spec);
+  console.log("Result: " + JSON.stringify(spec));
   return res;
 }
 
@@ -117,7 +125,7 @@ export function Sync(): void {
     rule.http = new HTTPIngressRuleValue();
     rule.http.paths = ingress.getPaths().map<HTTPIngressPath>((path) => {
       const p = new HTTPIngressPath();
-      p.path = path.replaceAll("//", "/");
+      p.path = path;
 
       p.backend = new IngressBackend();
       p.backend.service = new IngressServiceBackend();

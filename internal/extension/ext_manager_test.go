@@ -26,10 +26,15 @@ func TestNewExtensionManager(t *testing.T) {
 	files := os.DirFS("./testdata")
 
 	listener := &mockGRPCListener{}
-	mgr, err := NewExtensionManager(context.Background(), files, []grpc.DialOption{
-		grpc.WithContextDialer(listener.Dialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	})
+	mgr, err := NewExtensionManager(
+		context.Background(),
+		files,
+		nil,
+		WithGRPCOptions(
+			grpc.WithContextDialer(listener.Dialer),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}

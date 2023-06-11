@@ -30,14 +30,21 @@ type ExtensionWASIControllerResource struct {
 	Version string `json:"version"`
 	//+kubebuilder:validation:Pattern=^[a-z]([-a-z0-9]*[a-z0-9])?$
 	Resource string `json:"resource"`
-	//+required
+	// +required
 	Methods []Method `json:"methods"`
+	// +optional
+	ConfigMap string `json:"configMap,omitempty"`
 }
 
 type ExtensionWASIController struct {
 	Image string `json:"image"`
+	Tag   string `json:"tag"`
 	// +optional
 	Resources []ExtensionWASIControllerResource `json:"resources,omitempty"`
+}
+
+func (e *ExtensionWASIController) ImageTag() string {
+	return e.Image + ":" + e.Tag
 }
 
 // +kubebuilder:validation:Enum=Application;Work
@@ -50,9 +57,9 @@ type ExtensionWebhooks struct {
 
 type ControllerSpec struct {
 	// +optional
-	GRPC ExtensionGRPCController `json:"grpc,omitempty"`
+	GRPC *ExtensionGRPCController `json:"grpc,omitempty"`
 	// +optional
-	WASI ExtensionWASIController `json:"wasi,omitempty"`
+	WASI *ExtensionWASIController `json:"wasi,omitempty"`
 }
 
 type ExtensionSpec struct {

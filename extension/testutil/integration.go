@@ -49,8 +49,10 @@ func (i *IntegrationTester[Ext]) Run(t *testing.T, tests ...TestCase) {
 	}
 	ctx := context.Background()
 
-	tr.Run(ctx)
-	defer tr.Stop()
+	if err := tr.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tr.Stop() }()
 
 	for _, test := range tests {
 		t.Run(test.name(), func(t *testing.T) {

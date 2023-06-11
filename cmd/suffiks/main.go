@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -47,6 +48,10 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
+	defer stop()
+
 	var configFile string
 	flag.StringVar(&configFile, "config-file", "", "Path to the configuration file.")
 
@@ -108,7 +113,7 @@ func main() {
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	}
 
-	crdMgr, err := extension.NewExtensionManager(suffiks.CRDFiles, grpcOptions)
+	crdMgr, err := extension.NewExtensionManager(ctx, suffiks.CRDFiles, grpcOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to create CRD manager")
 		os.Exit(1)
@@ -186,7 +191,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := ctrl.SetupSignalHandler()
 	if err := extRec.RefreshCRD(ctx); err != nil {
 		panic(err)
 	}
@@ -214,14 +218,14 @@ func main() {
 func documentationServer(ctx context.Context, addr string, mgr *extension.ExtensionManager, log logr.Logger) {
 	fmt.Println("################ STARTING DOCUMENTATION SERVER ################")
 	ctrl := docparser.NewController()
-	ctrl.AddFS("_suffiks", suffiks.DocFiles)
+	_ = ctrl.AddFS("_suffiks", suffiks.DocFiles)
 	go updateDocs(ctx, ctrl, mgr, log)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		cats := ctrl.GetAll()
-		json.NewEncoder(w).Encode(cats)
+		_ = json.NewEncoder(w).Encode(cats)
 	})
 
 	if addr == "" {
@@ -257,7 +261,7 @@ func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *extension.
 			}
 
 			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.Name())
-			ctrl.Parse(ext.Name(), pages.GetPages())
+			_ = ctrl.Parse(ext.Name(), pages.GetPages())
 		}
 		select {
 		case <-ctx.Done():

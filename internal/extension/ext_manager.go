@@ -1,16 +1,19 @@
 package extension
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/extension/oci"
 	"github.com/suffiks/suffiks/internal/specgen"
+	"github.com/suffiks/suffiks/internal/waruntime"
 	"google.golang.org/grpc"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
@@ -18,19 +21,21 @@ import (
 type KeyValue map[string]any
 
 type ExtensionManager struct {
-	grpcOptions []grpc.DialOption
+	grpcOptions    []grpc.DialOption
+	wasiController *waruntime.Controller
 
-	lock sync.Mutex
-	spec map[suffiksv1.Target]*specgen.Generator
+	specLock sync.Mutex
+	spec     map[suffiksv1.Target]*specgen.Generator
 
 	rwlock     sync.RWMutex
 	extensions map[string]Extension
 }
 
 // NewExtensionManager creates a new ExtensionManager. It reads all .yaml files from the provided fs.FS as base types.
-func NewExtensionManager(files fs.FS, grpcOptions []grpc.DialOption) (*ExtensionManager, error) {
+func NewExtensionManager(ctx context.Context, files fs.FS, grpcOptions []grpc.DialOption) (*ExtensionManager, error) {
 	mgr := &ExtensionManager{
-		grpcOptions: grpcOptions,
+		grpcOptions:    grpcOptions,
+		wasiController: waruntime.New(ctx),
 
 		spec:       map[suffiksv1.Target]*specgen.Generator{},
 		extensions: map[string]Extension{},
@@ -70,8 +75,16 @@ func (c *ExtensionManager) Add(ext suffiksv1.Extension) error {
 }
 
 func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target) error {
-	spec := ext.Spec.OpenAPIV3Schema.Raw
+	if ext.Spec.Controller.GRPC != nil {
+		return c.addGRPC(ext, target)
+	} else if ext.Spec.Controller.WASI != nil {
+		return c.addWASI(ext, target)
+	}
 
+	return fmt.Errorf("ExtensionManager.add: no controller specified")
+}
+
+func (c *ExtensionManager) addGRPC(ext suffiksv1.Extension, target suffiksv1.Target) error {
 	gclient, err := grpc.Dial(ext.Spec.Controller.GRPC.Target(), c.grpcOptions...)
 	if err != nil {
 		return fmt.Errorf("ExtensionManager.add: grpc dial error: %w", err)
@@ -79,12 +92,14 @@ func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target)
 
 	client := protogen.NewExtensionClient(gclient)
 
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.specLock.Lock()
+	defer c.specLock.Unlock()
 	g, ok := c.spec[target]
 	if !ok {
 		return fmt.Errorf("%q not a valid target", target)
 	}
+
+	spec := ext.Spec.OpenAPIV3Schema.Raw
 	if err := g.Add(spec); err != nil {
 		return err
 	}
@@ -92,7 +107,7 @@ func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target)
 	c.rwlock.Lock()
 	defer c.rwlock.Unlock()
 
-	wext := &ProtoExtension{
+	wext := &GRPC{
 		Extension: ext,
 		client:    client,
 		gclient:   gclient,
@@ -105,9 +120,44 @@ func (c *ExtensionManager) add(ext suffiksv1.Extension, target suffiksv1.Target)
 	return nil
 }
 
+func (c *ExtensionManager) addWASI(ext suffiksv1.Extension, target suffiksv1.Target) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	files, err := oci.Get(ctx, ext.Spec.Controller.WASI.Image, ext.Spec.Controller.WASI.Tag)
+	if err != nil {
+		return fmt.Errorf("ExtensionManager.add: oci get error: %w", err)
+	}
+
+	c.specLock.Lock()
+	defer c.specLock.Unlock()
+	g, ok := c.spec[target]
+	if !ok {
+		return fmt.Errorf("%q not a valid target", target)
+	}
+
+	spec := ext.Spec.OpenAPIV3Schema.Raw
+	if err := g.Add(spec); err != nil {
+		return err
+	}
+
+	c.rwlock.Lock()
+	defer c.rwlock.Unlock()
+
+	wext := &WASI{
+		Extension:  ext,
+		controller: c.wasiController,
+	}
+	if err := wext.init(files); err != nil {
+		return err
+	}
+	c.extensions[ext.Name] = wext
+
+	return nil
+}
+
 func (c *ExtensionManager) Remove(ext *suffiksv1.Extension) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.specLock.Lock()
+	defer c.specLock.Unlock()
 
 	for _, target := range ext.Spec.Targets {
 		g, ok := c.spec[target]
@@ -125,8 +175,8 @@ func (c *ExtensionManager) Remove(ext *suffiksv1.Extension) error {
 }
 
 func (c *ExtensionManager) Schema(target suffiksv1.Target) *apiextv1.JSONSchemaProps {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.specLock.Lock()
+	defer c.specLock.Unlock()
 
 	g, ok := c.spec[target]
 	if !ok {
@@ -168,18 +218,6 @@ func (c *ExtensionManager) All() []Extension {
 
 type properties struct {
 	Properties map[string]any `json:"properties"`
-}
-
-func (e *ProtoExtension) init() error {
-	props := &properties{}
-
-	if err := json.Unmarshal(e.Spec().OpenAPIV3Schema.Raw, props); err != nil {
-		return err
-	}
-	for key := range props.Properties {
-		e.sourceSpec = append(e.sourceSpec, key)
-	}
-	return nil
 }
 
 func contains[T comparable](arr []T, val T) bool {

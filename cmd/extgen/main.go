@@ -16,7 +16,10 @@ import (
 	"text/template"
 
 	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
+	"github.com/suffiks/suffiks/cmd/extgen/wasi"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-tools/pkg/crd"
@@ -37,7 +40,7 @@ func main() {
 	app := &cli.App{
 		Name:     "extgen",
 		Usage:    "Generate extension code",
-		Commands: []*cli.Command{newGen, crdGen, rbacGen},
+		Commands: []*cli.Command{newGen, crdGen, rbacGen, wasi.New()},
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -208,7 +211,7 @@ var rbacGen = &cli.Command{
 			return err
 		}
 		registry := &markers.Registry{}
-		registry.Register(rbac.RuleDefinition)
+		_ = registry.Register(rbac.RuleDefinition)
 		collector := &markers.Collector{
 			Registry: registry,
 		}
@@ -321,7 +324,7 @@ var newGen = &cli.Command{
 		}{
 			Repo:       repo,
 			Name:       name,
-			GoName:     strings.Title(name),
+			GoName:     cases.Title(language.Und).String(name),
 			Receiver:   strings.ToLower(name[0:1]),
 			Validation: c.Bool("validation"),
 			Defaulting: c.Bool("defaulting"),

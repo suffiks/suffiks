@@ -29,7 +29,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				Spec: ExtensionSpec{
 					Targets: []Target{"Application", "Work"},
 					Controller: ControllerSpec{
-						GRPC: ExtensionGRPCController{
+						GRPC: &ExtensionGRPCController{
 							Namespace: "somenamespace",
 							Service:   "servicename",
 						},
@@ -54,7 +54,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				Spec: ExtensionSpec{
 					Targets: []Target{"Application"},
 					Controller: ControllerSpec{
-						GRPC: ExtensionGRPCController{
+						GRPC: &ExtensionGRPCController{
 							Service: "servicename",
 						},
 					},
@@ -81,7 +81,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
 					Controller: ControllerSpec{
-						GRPC: ExtensionGRPCController{
+						GRPC: &ExtensionGRPCController{
 							Service: "servicename",
 						},
 					},
@@ -101,7 +101,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
 					Controller: ControllerSpec{
-						GRPC: ExtensionGRPCController{
+						GRPC: &ExtensionGRPCController{
 							Service: "servicename",
 						},
 					},
@@ -119,7 +119,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				Spec: ExtensionSpec{
 					Targets: []Target{"Invalid"},
 					Controller: ControllerSpec{
-						GRPC: ExtensionGRPCController{
+						GRPC: &ExtensionGRPCController{
 							Service: "servicename",
 						},
 					},

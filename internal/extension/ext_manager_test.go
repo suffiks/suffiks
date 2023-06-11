@@ -26,7 +26,7 @@ func TestNewExtensionManager(t *testing.T) {
 	files := os.DirFS("./testdata")
 
 	listener := &mockGRPCListener{}
-	mgr, err := NewExtensionManager(files, []grpc.DialOption{
+	mgr, err := NewExtensionManager(context.Background(), files, []grpc.DialOption{
 		grpc.WithContextDialer(listener.Dialer),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	})
@@ -108,5 +108,7 @@ func (m *mockGRPCListener) init() {
 	m.listener = bufconn.Listen(1024 * 1024)
 	m.grpcServer = grpc.NewServer()
 	protogen.RegisterExtensionServer(m.grpcServer, m.Server)
-	m.grpcServer.Serve(m.listener)
+	if err := m.grpcServer.Serve(m.listener); err != nil {
+		panic(err)
+	}
 }

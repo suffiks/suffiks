@@ -56,7 +56,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 
 	var pages [][]byte
 	if doc != nil {
-		fs.WalkDir(doc.FS, doc.Root, func(path string, d fs.DirEntry, err error) error {
+		err := fs.WalkDir(doc.FS, doc.Root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 				return err
 			}
@@ -69,6 +69,9 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 			pages = append(pages, page)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 
 	protogen.RegisterExtensionServer(s, NewServer(ext, pages))

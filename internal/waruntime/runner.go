@@ -8,7 +8,7 @@ import (
 	"os"
 	"sync"
 
-	//lint:ignore SA1019 Keep using module since it's still being used by client-go (their proto types)
+	// Until client-go is updated to use the new proto, we need to use the old one.
 	golangproto "github.com/golang/protobuf/proto"
 
 	"github.com/suffiks/suffiks/extension/protogen"
@@ -429,14 +429,14 @@ func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint32 {
 	return uint32(ptr)<<16 | uint32(len(b))
 }
 
-func ptrSizeToString(mod api.Module, ptrSize uint32) (string, error) {
-	size := ptrSize & 0xFFFF
-	ptr := ptrSize >> 16
+// func ptrSizeToString(mod api.Module, ptrSize uint32) (string, error) {
+// 	size := ptrSize & 0xFFFF
+// 	ptr := ptrSize >> 16
 
-	b, ok := mod.Memory().Read(uint32(ptr), uint32(size))
-	if !ok {
-		return "", fmt.Errorf("failed to read memory at %d with size %d", ptr, size)
-	}
+// 	b, ok := mod.Memory().Read(uint32(ptr), uint32(size))
+// 	if !ok {
+// 		return "", fmt.Errorf("failed to read memory at %d with size %d", ptr, size)
+// 	}
 
-	return string(b), nil
-}
+// 	return string(b), nil
+// }

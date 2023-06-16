@@ -93,7 +93,7 @@ type ExtensionStatus struct {
 //+kubebuilder:printcolumn:name="Always",type=boolean,JSONPath=`.spec.always`
 //+kubebuilder:printcolumn:name="Validation",type=boolean,JSONPath=`.spec.webhooks.validation`
 //+kubebuilder:printcolumn:name="Defaulting",type=boolean,JSONPath=`.spec.webhooks.defaulting`
-// +genclient
+// +genclient:nonNamespaced
 
 // Extension is the Schema for the extensions API
 type Extension struct {

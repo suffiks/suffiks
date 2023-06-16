@@ -61,6 +61,35 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: client
+client: ## Generate client code.
+	rm -rf pkg/client
+
+	go run k8s.io/code-generator/cmd/client-gen \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input github.com/suffiks/suffiks/api/suffiks/v1 \
+		--output-package github.com/suffiks/suffiks/pkg/client/clientset \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	go run k8s.io/code-generator/cmd/lister-gen \
+		--input-dirs github.com/suffiks/suffiks/api/suffiks/v1 \
+		--output-package github.com/suffiks/suffiks/pkg/client/lister \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	go run k8s.io/code-generator/cmd/informer-gen \
+		--input-dirs github.com/suffiks/suffiks/api/suffiks/v1 \
+		--versioned-clientset-package github.com/suffiks/suffiks/pkg/client/clientset/versioned \
+		--listers-package github.com/suffiks/suffiks/pkg/client/lister \
+		--output-package github.com/suffiks/suffiks/pkg/client/informer \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	mv github.com/suffiks/suffiks/pkg/client pkg/client
+	rm -rf github.com
+
 ##@ Build
 
 .PHONY: build
@@ -174,17 +203,3 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-.PHONY: clientset
-clientset: TMPDIR := $(shell mktemp -d)
-clientset: ## Generate clientset
-	go run k8s.io/code-generator/cmd/client-gen \
-		--clientset-name versioned \
-		--input-base=github.com/suffiks/suffiks/api --input-dirs=. --input="suffiks/v1" \
-		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR) \
-		--go-header-file hack/boilerplate.go.txt
-	cp -r $(TMPDIR)/github.com/suffiks/suffiks/pkg .
-# Application is special, so reference the base package
-	sed -i 's|github.com/suffiks/suffiks/api/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/application.go
-	sed -i 's|github.com/suffiks/suffiks/api/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake/fake_application.go
-	rm -rf $(TMPDIR)

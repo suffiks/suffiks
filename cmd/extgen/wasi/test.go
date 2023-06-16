@@ -14,7 +14,7 @@ import (
 	"github.com/suffiks/suffiks/internal/controller"
 	"github.com/suffiks/suffiks/internal/extension"
 	"github.com/suffiks/suffiks/internal/extension/oci"
-	"github.com/suffiks/suffiks/pkg/client/generated/clientset/versioned/scheme"
+	"github.com/suffiks/suffiks/pkg/client/clientset/versioned/scheme"
 	"github.com/urfave/cli/v2"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

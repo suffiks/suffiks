@@ -30,3 +30,4 @@ scratchpad
 
 .vscode
 config/crd/bases/_.yaml
+node_modules

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/suffiks/suffiks/docparser"
+	"github.com/suffiks/suffiks/internal/docparser"
 )
 
 func main() {

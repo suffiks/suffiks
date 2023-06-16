@@ -6,4 +6,5 @@ package tools
 import (
 	_ "k8s.io/code-generator/pkg/util"
 	_ "k8s.io/gengo/args"
+	_ "mvdan.cc/gofumpt"
 )

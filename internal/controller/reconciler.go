@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	ctrl "sigs.k8s.io/controller-runtime"

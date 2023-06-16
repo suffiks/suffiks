@@ -4,9 +4,9 @@ import (
 	"context"
 	goerrors "errors"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/internal/extension"
 	"github.com/suffiks/suffiks/internal/specgen"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"

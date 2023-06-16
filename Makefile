@@ -41,21 +41,25 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./api/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./pkg/api/..." output:crd:artifacts:config=config/crd/bases
 	$(CONTROLLER_GEN) rbac:roleName=manager-role webhook paths="./internal/controller/..."
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object paths="./api/..."
-	$(CONTROLLER_GEN) object paths="./docparser/..."
+	$(CONTROLLER_GEN) object paths="./pkg/api/..."
+	$(CONTROLLER_GEN) object paths="./internal/docparser/..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
 .PHONY: vet
-vet: ## Run go vet against code.
+vet: vulncheck ## Run go vet against code.
 	go vet ./...
+
+.PHONY: vulncheck
+vulncheck: ## Run gosec against code.
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 .PHONY: test
 test: manifests generate fmt vet envtest ## Run tests.
@@ -68,19 +72,19 @@ client: ## Generate client code.
 	go run k8s.io/code-generator/cmd/client-gen \
 		--clientset-name "versioned" \
 		--input-base "" \
-		--input github.com/suffiks/suffiks/api/suffiks/v1 \
+		--input github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
 		--output-package github.com/suffiks/suffiks/pkg/client/clientset \
 		-h ./hack/boilerplate.go.txt \
 		--output-base .
 
 	go run k8s.io/code-generator/cmd/lister-gen \
-		--input-dirs github.com/suffiks/suffiks/api/suffiks/v1 \
+		--input-dirs github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
 		--output-package github.com/suffiks/suffiks/pkg/client/lister \
 		-h ./hack/boilerplate.go.txt \
 		--output-base .
 
 	go run k8s.io/code-generator/cmd/informer-gen \
-		--input-dirs github.com/suffiks/suffiks/api/suffiks/v1 \
+		--input-dirs github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
 		--versioned-clientset-package github.com/suffiks/suffiks/pkg/client/clientset/versioned \
 		--listers-package github.com/suffiks/suffiks/pkg/client/lister \
 		--output-package github.com/suffiks/suffiks/pkg/client/informer \
@@ -180,10 +184,9 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
+KUSTOMIZE_VERSION ?= v5.0.1
+CONTROLLER_TOOLS_VERSION ?= v0.12.0
 
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -191,7 +194,7 @@ $(KUSTOMIZE): $(LOCALBIN)
 		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
 		rm -rf $(LOCALBIN)/kustomize; \
 	fi
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.

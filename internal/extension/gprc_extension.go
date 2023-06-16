@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"google.golang.org/grpc"
 )
 

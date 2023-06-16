@@ -4,7 +4,7 @@ package controller
 // 	"context"
 // 	"fmt"
 
-// 	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
+// 	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 // 	"github.com/suffiks/suffiks/base"
 // 	"github.com/suffiks/suffiks/base/tracing"
 // 	"go.opentelemetry.io/otel/trace"

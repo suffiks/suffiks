@@ -39,6 +39,7 @@ require (
 	k8s.io/code-generator v0.27.2
 	k8s.io/gengo v0.0.0-20230306165830-ab3349d207d4
 	k8s.io/utils v0.0.0-20230505201702-9f6742963106
+	mvdan.cc/gofumpt v0.5.0
 	oras.land/oras-go/v2 v2.2.0
 	sigs.k8s.io/controller-runtime v0.15.0
 	sigs.k8s.io/controller-tools v0.12.0

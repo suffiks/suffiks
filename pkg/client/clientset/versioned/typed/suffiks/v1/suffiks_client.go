@@ -5,7 +5,7 @@ package v1
 import (
 	"net/http"
 
-	v1 "github.com/suffiks/suffiks/api/suffiks/v1"
+	v1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/suffiks/suffiks/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )

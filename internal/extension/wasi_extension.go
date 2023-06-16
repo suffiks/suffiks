@@ -10,10 +10,10 @@ import (
 	"io"
 	"path/filepath"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension/oci"
 	"github.com/suffiks/suffiks/internal/waruntime"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"k8s.io/client-go/dynamic"
 )
 

@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"

@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/tracing"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 

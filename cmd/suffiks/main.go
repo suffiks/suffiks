@@ -17,11 +17,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks"
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
-	"github.com/suffiks/suffiks/base/tracing"
-	"github.com/suffiks/suffiks/docparser"
-	controller "github.com/suffiks/suffiks/internal/controller"
+	"github.com/suffiks/suffiks/internal/controller"
+	"github.com/suffiks/suffiks/internal/docparser"
 	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/tracing"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -53,8 +53,14 @@ func main() {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
 	defer stop()
 
-	var configFile string
-	flag.StringVar(&configFile, "config-file", "", "Path to the configuration file.")
+	var metricsAddr string
+	var enableLeaderElection bool
+	var probeAddr string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
 
 	opts := zap.Options{
 		Development: true,
@@ -86,7 +92,14 @@ func main() {
 	var err error
 	// TODO: Re-introduce config file support
 	// ctrlConfig := suffiksv1.ProjectConfig{}
-	options := ctrl.Options{Scheme: scheme}
+	options := ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "operator.suffiks.com",
+	}
 	// if configFile != "" {
 	// 	options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
 	// 	if err != nil {

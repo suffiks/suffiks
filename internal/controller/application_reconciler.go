@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
-	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/tracing"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"go.opentelemetry.io/otel/attribute"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"

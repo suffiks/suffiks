@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension/oci"
 	"github.com/suffiks/suffiks/internal/specgen"
 	"github.com/suffiks/suffiks/internal/waruntime"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"google.golang.org/grpc"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/client-go/dynamic"

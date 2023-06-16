@@ -6,11 +6,11 @@ import (
 	"net"
 
 	"github.com/suffiks/suffiks"
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/controller"
 	intextension "github.com/suffiks/suffiks/internal/extension"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/test/bufconn"

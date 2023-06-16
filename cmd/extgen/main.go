@@ -15,8 +15,8 @@ import (
 	"strings"
 	"text/template"
 
-	suffiksv1 "github.com/suffiks/suffiks/api/suffiks/v1"
 	"github.com/suffiks/suffiks/cmd/extgen/wasi"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

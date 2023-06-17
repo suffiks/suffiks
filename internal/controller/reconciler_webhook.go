@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/suffiks/suffiks/extension/protogen"
 	"github.com/suffiks/suffiks/internal/extension"
@@ -19,15 +20,27 @@ import (
 
 var _ admission.CustomValidator = &ReconcilerWrapper[*suffiksv1.Application]{}
 
+type namespaceName interface {
+	GetNamespace() string
+	GetName() string
+}
+
 func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.ValidationType, newObj, oldObj runtime.Object) (admission.Warnings, error) {
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
-		kind = fmt.Sprintf("%T", r.Child.NewObject())
+		parts := strings.Split(fmt.Sprintf("%T", r.Child.NewObject()), ".")
+		kind = parts[len(parts)-1]
 	}
 
-	ctx, span := tracing.Start(ctx, "Validate."+kind)
+	ctx, span := tracing.Start(ctx, "Validate")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", string(typ)))
+	span.SetAttributes(attribute.String("type", string(typ)), attribute.String("kind", kind))
+
+	if nn, ok := newObj.(namespaceName); ok {
+		span.SetAttributes(attribute.String("name", nn.GetName()), attribute.String("namespace", nn.GetNamespace()))
+	} else if nn, ok := oldObj.(namespaceName); ok {
+		span.SetAttributes(attribute.String("name", nn.GetName()), attribute.String("namespace", nn.GetNamespace()))
+	}
 
 	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
 	ctx = logr.IntoContext(ctx, log)
@@ -74,13 +87,15 @@ func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) 
 	v := obj.(V)
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
-		kind = fmt.Sprintf("%T", r.Child.NewObject())
+		parts := strings.Split(fmt.Sprintf("%T", r.Child.NewObject()), ".")
+		kind = parts[len(parts)-1]
 	}
 
-	ctx, span := tracing.Start(ctx, "Validate."+kind)
+	ctx, span := tracing.Start(ctx, "Default")
 	defer span.End()
 	span.SetAttributes(attribute.String("type", "default"))
 	span.SetAttributes(attribute.String("name", v.GetName()), attribute.String("namespace", v.GetNamespace()))
+	span.SetAttributes(attribute.String("kind", kind))
 
 	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
 	ctx = logr.IntoContext(ctx, log)

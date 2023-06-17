@@ -1,19 +1,18 @@
 import { Protobuf, Reader } from "as-proto/assembly";
 import { JSON } from "json-as";
-import { EnvFrom } from "../extension/EnvFrom";
-import { EnvFromType } from "../extension/EnvFromType";
-import { KeyValue } from "../extension/KeyValue";
-import { Owner } from "../extension/Owner";
-import { ValidationError } from "../extension/ValidationError";
-import { ValidationType as PBValidationType } from "../extension/ValidationType";
-import { Container } from "../k8s/io/api/core/v1/Container";
-import { ObjectReference } from "../k8s/io/api/core/v1/ObjectReference";
-import { GroupVersionResource } from "../k8s/io/apimachinery/pkg/apis/meta/v1/GroupVersionResource";
+import { EnvFrom } from "./extension/EnvFrom";
+import { EnvFromType } from "./extension/EnvFromType";
+import { KeyValue } from "./extension/KeyValue";
+import { Owner } from "./extension/Owner";
+import { ValidationError } from "./extension/ValidationError";
+import { ValidationType as PBValidationType } from "./extension/ValidationType";
+import { Container } from "./k8s/io/api/core/v1/Container";
+import { ObjectReference } from "./k8s/io/api/core/v1/ObjectReference";
+import { GroupVersionResource } from "./k8s/io/apimachinery/pkg/apis/meta/v1/GroupVersionResource";
 import { ClientError } from "./suffiks/clientError";
 import { Host } from "./suffiks/env";
 
-export { PBValidationType as ValidationType };
-export { ValidationError };
+export { ValidationError, PBValidationType as ValidationType };
 
 export namespace Suffiks {
   class Resource<T> {

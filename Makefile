@@ -168,7 +168,7 @@ gen-extensions:
 		--go_out=. \
 		--go-grpc_out=. \
 		--plugin=protoc-gen-as=./node_modules/.bin/as-proto-gen \
-		--as_out=./extension/as
+		--as_out=./extension/as/assembly
 
 
 ##@ Build Dependencies

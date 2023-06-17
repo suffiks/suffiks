@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 
 	"github.com/suffiks/suffiks/internal/extension"
 	"github.com/suffiks/suffiks/internal/tracing"
@@ -48,12 +49,13 @@ type ReconcilerWrapper[V Object] struct {
 func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
-		kind = fmt.Sprintf("%T", r.Child.NewObject())
+		parts := strings.Split(fmt.Sprintf("%T", r.Child.NewObject()), ".")
+		kind = parts[len(parts)-1]
 	}
 
-	ctx, span := tracing.Start(ctx, "Reconcile."+kind)
+	ctx, span := tracing.Start(ctx, "Reconcile")
 	defer span.End()
-	span.SetAttributes(attribute.String("name", req.Name), attribute.String("namespace", req.Namespace))
+	span.SetAttributes(attribute.String("name", req.Name), attribute.String("namespace", req.Namespace), attribute.String("kind", kind))
 
 	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
 	ctx = logr.IntoContext(ctx, log)

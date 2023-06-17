@@ -1,28 +1,3 @@
-/*
-
-	ClientErrorUnknown ClientError = iota
-	ClientErrorNotFound
-	ClientErrorAlreadyExists
-	ClientErrorInvalid
-	ClientErrorForbidden
-	ClientErrorConflict
-	ClientErrorBadRequest
-	ClientErrorGone
-	ClientErrorInternalError
-	ClientErrorMethodNotSupported
-	ClientErrorNotAcceptable
-	ClientErrorEntityTooLarge
-	ClientErrorResourceExpired
-	ClientErrorServerTimeout
-	ClientErrorServiceUnavailable
-	ClientErrorTimeout
-	ClientErrorTooManyRequests
-	ClientErrorUnauthorized
-	ClientErrorUnexpectedObject
-	ClientErrorUnexpectedServerError
-	ClientErrorUnsupportedMediaType
-  */
-
 export class ClientError {
   public code: u8;
   constructor(c: usize) {

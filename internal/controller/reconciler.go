@@ -23,7 +23,7 @@ type Reconciler[V Object] interface {
 	NewObject() V
 	CreateOrUpdate(ctx context.Context, obj V, changeset *extension.Changeset) error
 	Delete(ctx context.Context, obj V) error
-	UpdateStatus(ctx context.Context, obj V, extensions []string) error
+	UpdateStatus(ctx context.Context, obj V, extensions []string) (changes bool, err error)
 	IsModified(ctx context.Context, obj V) (bool, error)
 	Extensions(obj V) []string
 	// This might be required for some reconcilers, but not for others.
@@ -42,19 +42,30 @@ const suffiksFinalizer = "suffiks.suffiks.com/finalizer"
 type ReconcilerWrapper[V Object] struct {
 	client.Client
 
-	Child         Reconciler[V]
+	Child         traceWrapper[V] // Reconciler[V]
 	CRDController *ExtensionController
 }
 
+func New[V Object](client client.Client, child Reconciler[V], crdController *ExtensionController) *ReconcilerWrapper[V] {
+	return &ReconcilerWrapper[V]{
+		Client: client,
+		Child: traceWrapper[V]{
+			Reconciler: child,
+		},
+		CRDController: crdController,
+	}
+}
+
 func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	ctx, span := tracing.Start(ctx, "Reconcile")
+	defer span.End()
+
 	kind := r.Child.NewObject().GetObjectKind().GroupVersionKind().Kind
 	if kind == "" {
 		parts := strings.Split(fmt.Sprintf("%T", r.Child.NewObject()), ".")
 		kind = parts[len(parts)-1]
 	}
 
-	ctx, span := tracing.Start(ctx, "Reconcile")
-	defer span.End()
 	span.SetAttributes(attribute.String("name", req.Name), attribute.String("namespace", req.Namespace), attribute.String("kind", kind))
 
 	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
@@ -92,7 +103,7 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if !controllerutil.ContainsFinalizer(v, suffiksFinalizer) {
-		span.SetAttributes(attribute.String("action", "add finalizer"))
+		span.AddEvent("add finalizer")
 		controllerutil.AddFinalizer(v, suffiksFinalizer)
 		if err := r.Update(ctx, v); err != nil {
 			return r.handleError(ctx, err, "unable to add finalizer")
@@ -105,12 +116,16 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.handleError(ctx, err, "unable to check if application is modified", client.IgnoreNotFound)
 	}
 	if !modified {
-		if err := r.Child.UpdateStatus(ctx, v, r.Child.Extensions(v)); err != nil {
+		changes, err := r.Child.UpdateStatus(ctx, v, r.Child.Extensions(v))
+		if err != nil {
 			return r.handleError(ctx, err, "unable to update child status on non-modified object")
 		}
 
-		err = r.Status().Update(ctx, v)
-		return r.handleError(ctx, err, "unable to update status on non-modified object")
+		if changes {
+			err = r.Status().Update(ctx, v)
+			return r.handleError(ctx, err, "unable to update status on non-modified object")
+		}
+		return ctrl.Result{}, nil
 	}
 
 	result, err := r.CRDController.Sync(ctx, v)
@@ -131,12 +146,16 @@ func (r *ReconcilerWrapper[V]) Reconcile(ctx context.Context, req ctrl.Request) 
 		return r.handleError(ctx, err, "unable to create or update")
 	}
 
-	if err := r.Child.UpdateStatus(ctx, v, result.Extensions.Slice()); err != nil {
+	changes, err := r.Child.UpdateStatus(ctx, v, result.Extensions.Slice())
+	if err != nil {
 		return r.handleError(ctx, err, "unable to update child status")
 	}
 
-	err = r.Status().Update(ctx, v)
-	return r.handleError(ctx, err, "unable to update status")
+	if changes {
+		err = r.Status().Update(ctx, v)
+		return r.handleError(ctx, err, "unable to update status")
+	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

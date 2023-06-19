@@ -57,5 +57,5 @@ export namespace Host {
 
 	// @ts-ignore decorators are valid here
 	@external("suffiks", "DeleteResource")
-	export declare function deleteResource(ptr : u32, size : u32): u32;
+	export declare function deleteResource(ptr : u32, size : u32, namePtr : u32, nameSize : u32): u32;
 }

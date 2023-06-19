@@ -7,7 +7,6 @@ import { Owner } from "./extension/Owner";
 import { ValidationError } from "./extension/ValidationError";
 import { ValidationType as PBValidationType } from "./extension/ValidationType";
 import { Container } from "./k8s/io/api/core/v1/Container";
-import { ObjectReference } from "./k8s/io/api/core/v1/ObjectReference";
 import { GroupVersionResource } from "./k8s/io/apimachinery/pkg/apis/meta/v1/GroupVersionResource";
 import { ClientError } from "./suffiks/clientError";
 import { Host } from "./suffiks/env";
@@ -237,15 +236,27 @@ export namespace Suffiks {
   /**
    * Delete an existing resource.
    */
-  export function deleteResource(obj: ObjectReference): ClientError | null {
-    const b = Protobuf.encode(obj, ObjectReference.encode);
+  export function deleteResource(
+    group: string,
+    version: string,
+    resource: string,
+    name: string
+  ): ClientError | null {
+    const gvr = new GroupVersionResource(group, version, resource);
+    const b = Protobuf.encode(gvr, GroupVersionResource.encode);
+    const nameb = String.UTF8.encode(name);
+    const namePtr = changetype<u32>(nameb);
+
     const err = Host.deleteResource(
       b.dataStart as u32,
-      b.buffer.byteLength as u32
+      b.buffer.byteLength as u32,
+      namePtr as u32,
+      nameb.byteLength as u32
     );
-    if (err == 0) {
+    if (err > 0) {
       return new ClientError(err);
     }
+
     return null;
   }
 

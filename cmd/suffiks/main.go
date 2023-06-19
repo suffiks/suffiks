@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +11,6 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
-	"k8s.io/client-go/dynamic"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"github.com/go-logr/logr"
@@ -31,8 +29,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -99,6 +99,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "operator.suffiks.com",
+		NewCache:               cache.New,
 	}
 	// if configFile != "" {
 	// 	options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
@@ -157,15 +158,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	appRec := &controller.ReconcilerWrapper[*suffiksv1.Application]{
-		Client: mgr.GetClient(),
-		Child: &controller.AppReconciler{
+	appRec := controller.New[*suffiksv1.Application](
+		mgr.GetClient(),
+		&controller.AppReconciler{
 			Scheme: mgr.GetScheme(),
 			Client: mgr.GetClient(),
 			// Defaults: ctrlConfig.ApplicationDefaults,
 		},
-		CRDController: extController,
-	}
+		extController,
+	)
 	if err = appRec.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
@@ -236,7 +237,6 @@ func main() {
 }
 
 func documentationServer(ctx context.Context, addr string, mgr *extension.ExtensionManager, log logr.Logger) {
-	fmt.Println("################ STARTING DOCUMENTATION SERVER ################")
 	ctrl := docparser.NewController()
 	_ = ctrl.AddFS("_suffiks", suffiks.DocFiles)
 	go updateDocs(ctx, ctrl, mgr, log)
@@ -273,14 +273,12 @@ func documentationServer(ctx context.Context, addr string, mgr *extension.Extens
 func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *extension.ExtensionManager, log logr.Logger) {
 	for {
 		for _, ext := range mgr.All() {
-			fmt.Println("Start update docs for", ext.Name())
 			pages, err := ext.Documentation(ctx)
 			if err != nil {
 				log.V(5).Error(err, "unable to get documentation")
 				continue
 			}
 
-			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.Name())
 			_ = ctrl.Parse(ext.Name(), pages.GetPages())
 		}
 		select {

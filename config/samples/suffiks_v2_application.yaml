@@ -1,7 +1,7 @@
 apiVersion: suffiks.com/v1
 kind: Application
 metadata:
-  name: application-sample
+  name: application-sample3
   namespace: default
   # annotations:
   #   suffiks.com/security-does-not-matter: "true"

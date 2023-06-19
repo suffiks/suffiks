@@ -88,7 +88,7 @@ func (w *WASI) Delete(ctx context.Context, in *protogen.SyncRequest) (StreamResp
 		return nil, fmt.Errorf("WASI.Delete: error creating new runner: %w", err)
 	}
 
-	return nil, w.instance.Delete(ctx, in)
+	return &fakeResponse{}, w.instance.Delete(ctx, in)
 }
 
 func (w *WASI) Documentation(ctx context.Context) (*protogen.DocumentationResponse, error) {
@@ -122,6 +122,12 @@ func (w *WASI) init(files map[string][]byte) error {
 		return fmt.Errorf("WASI.init: error loading docs: %w", err)
 	}
 	return nil
+}
+
+type fakeResponse struct{}
+
+func (f *fakeResponse) Recv() (*protogen.Response, error) {
+	return nil, io.EOF
 }
 
 func (w *WASI) initDocs(files map[string][]byte) error {

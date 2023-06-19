@@ -16,6 +16,7 @@ import (
 	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/suffiks/suffiks/pkg/client/clientset/versioned/scheme"
 	"github.com/urfave/cli/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -47,11 +48,17 @@ type syncTest struct {
 	Lookup   []unstructured.Unstructured `yaml:"lookup"`
 }
 
+type deleteTest struct {
+	Resource *unstructured.Unstructured  `yaml:"resource"`
+	NotFound []unstructured.Unstructured `yaml:"notFound"`
+}
+
 type test struct {
 	Name       string          `yaml:"name"`
 	Validate   *validateTest   `yaml:"validate"`
 	Defaulting *defaultingTest `yaml:"defaulting"`
 	Sync       *syncTest       `yaml:"sync"`
+	Delete     *deleteTest     `yaml:"delete"`
 }
 
 func (t test) Test(ctx context.Context, ctrl *controller.ExtensionController, client dynamic.Interface) bool {
@@ -63,6 +70,9 @@ func (t test) Test(ctx context.Context, ctrl *controller.ExtensionController, cl
 	}
 	if t.Sync != nil {
 		return t.sync(ctx, ctrl, client)
+	}
+	if t.Delete != nil {
+		return t.delete(ctx, ctrl, client)
 	}
 
 	printLog(t.Name, "No test found")
@@ -195,6 +205,36 @@ func (t test) sync(ctx context.Context, ctrl *controller.ExtensionController, cl
 	return true
 }
 
+func (t test) delete(ctx context.Context, ctrl *controller.ExtensionController, client dynamic.Interface) bool {
+	verboseLog(ctx, t.Name, "Delete")
+
+	obj := newObject(t.Delete.Resource)
+	err := ctrl.Delete(ctx, obj)
+	if err != nil {
+		printError(t.Name, "Unexpected error: %v", err)
+		return false
+	}
+
+	for _, lookup := range t.Delete.NotFound {
+		verboseLog(ctx, t.Name, "NotFound %s", lookup.GetName())
+
+		gvr, _ := meta.UnsafeGuessKindToResource(lookup.GroupVersionKind())
+
+		ns := lookup.GetNamespace()
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+
+		_, err := client.Resource(gvr).Namespace(ns).Get(ctx, lookup.GetName(), metav1.GetOptions{})
+		if !errors.IsNotFound(err) {
+			printError(t.Name, "Expected not found: %v", err)
+			return false
+		}
+	}
+
+	return true
+}
+
 func printError(name, format string, args ...any) {
 	printLog(name, "[ERROR] "+format, args...)
 }
@@ -210,7 +250,8 @@ func verboseLog(ctx context.Context, name, format string, args ...any) {
 }
 
 type tests struct {
-	Tests []test `yaml:"tests"`
+	ConfigMap *unstructured.Unstructured `yaml:"configMap"`
+	Tests     []test                     `yaml:"tests"`
 }
 
 func testCmd() *cli.Command {

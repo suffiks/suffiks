@@ -100,7 +100,7 @@ func (r *ReconcilerWrapper[V]) Default(ctx context.Context, obj runtime.Object) 
 	log := logr.FromContext(ctx).WithValues("trace_id", span.SpanContext().TraceID().String())
 	ctx = logr.IntoContext(ctx, log)
 
-	if defaulter, ok := r.Child.(ReconcilerDefault[V]); ok {
+	if defaulter, ok := r.Child.Reconciler.(ReconcilerDefault[V]); ok {
 		if err := defaulter.Default(ctx, v); err != nil {
 			return err
 		}

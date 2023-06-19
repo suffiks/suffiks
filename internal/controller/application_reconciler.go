@@ -15,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -91,6 +92,9 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 				"app": app.Name,
 			},
 		}
+		if svc.Labels == nil {
+			svc.Labels = map[string]string{}
+		}
 		for k, v := range depl.Labels {
 			svc.Labels[k] = v
 		}
@@ -116,7 +120,7 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 		return fmt.Errorf("error getting deployment: %w", err)
 	}
 
-	if err == nil {
+	if err == nil && existingDepl.Generation > 0 {
 		depl.Generation = existingDepl.Generation
 		span.SetAttributes(attribute.String("action", "update deployment"))
 		if err := a.Client.Update(ctx, depl); err != nil {
@@ -132,51 +136,77 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 	return nil
 }
 
-func (a *AppReconciler) UpdateStatus(ctx context.Context, app *suffiksv1.Application, extensions []string) error {
+func (a *AppReconciler) UpdateStatus(ctx context.Context, app *suffiksv1.Application, extensions []string) (updates bool, err error) {
 	hash, err := app.Hash()
 	if err != nil {
-		return fmt.Errorf("error hashing application: %w", err)
+		return updates, fmt.Errorf("error hashing application: %w", err)
 	}
-	app.Status.Hash = hash
-	app.Status.Extensions = extensions
+	if app.Status.Hash != hash {
+		updates = true
+		app.Status.Hash = hash
+	}
+
+	if !slices.Equal(app.Status.Extensions, extensions) {
+		updates = true
+		app.Status.Extensions = extensions
+	}
 
 	depl := &appsv1.Deployment{}
 	if err := a.Client.Get(ctx, client.ObjectKeyFromObject(app), depl); err != nil {
-		return fmt.Errorf("error getting deployment: %w", err)
+		return updates, nil
+		// return updates, fmt.Errorf("error getting deployment: %w", err)
 	}
-	app.Status.Replicas = depl.Status.AvailableReplicas
-	app.Status.AvailableReplicas = depl.Status.AvailableReplicas
-	return nil
+
+	if app.Status.Replicas != depl.Status.AvailableReplicas {
+		updates = true
+		app.Status.Replicas = depl.Status.AvailableReplicas
+	}
+
+	if app.Status.AvailableReplicas != depl.Status.AvailableReplicas {
+		updates = true
+		app.Status.AvailableReplicas = depl.Status.AvailableReplicas
+	}
+	return updates, nil
 }
 
 func (a *AppReconciler) IsModified(ctx context.Context, app *suffiksv1.Application) (bool, error) {
 	h, err := app.Hash()
 	if err != nil {
+		tracing.Get(ctx).RecordError(fmt.Errorf("IsModified: get app hash: %w", err))
 		return false, err
 	}
 
-	if app.Status.Hash == h {
-		ok := client.ObjectKeyFromObject(app)
-		if err := a.Client.Get(ctx, ok, &appsv1.Deployment{}); err != nil && errors.IsNotFound(err) {
+	if app.Status.Hash != h {
+		tracing.Get(ctx).AddEvent("Hash mismatch")
+		return true, nil
+	}
+
+	ok := client.ObjectKeyFromObject(app)
+	if err := a.Client.Get(ctx, ok, &appsv1.Deployment{}); err != nil && errors.IsNotFound(err) {
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+	tracing.Get(ctx).AddEvent("Got from client")
+
+	spec, err := app.WellKnownSpec()
+	if err != nil {
+		tracing.Get(ctx).RecordError(fmt.Errorf("IsModified: get well known spec: %w", err))
+		return false, err
+	}
+	tracing.Get(ctx).AddEvent("Got well known spec")
+
+	if spec.Port > 0 {
+		tracing.Get(ctx).AddEvent("Checking service")
+		if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
 			return true, nil
 		} else if err != nil {
+			tracing.Get(ctx).RecordError(fmt.Errorf("IsModified: get service: %w", err))
 			return false, err
 		}
-
-		spec, err := app.WellKnownSpec()
-		if err != nil {
-			return false, err
-		}
-		if spec.Port > 0 {
-			if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
-				return true, nil
-			} else if err != nil {
-				return false, err
-			}
-		}
-		return false, nil
+		tracing.Get(ctx).AddEvent("Done checking service")
 	}
-	return true, nil
+	return false, nil
 }
 
 func (a *AppReconciler) Delete(ctx context.Context, app *suffiksv1.Application) error {

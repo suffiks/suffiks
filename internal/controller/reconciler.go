@@ -162,15 +162,15 @@ func (r *ReconcilerWrapper[V]) handleError(ctx context.Context, err error, msg s
 		return ctrl.Result{}, nil
 	}
 
-	span := trace.SpanFromContext(ctx)
-	span.RecordError(err)
-
+	var opts []trace.EventOption
 	_, fn, l, ok := runtime.Caller(1)
 	if ok {
-		span.SetAttributes(
+		opts = append(opts, trace.WithAttributes(
 			attribute.String("location", fn+":"+strconv.Itoa(l)),
-		)
+		), trace.WithStackTrace(true))
 	}
+	span := trace.SpanFromContext(ctx)
+	span.RecordError(err, opts...)
 
 	for _, f := range f {
 		err = f(err)
@@ -179,6 +179,7 @@ func (r *ReconcilerWrapper[V]) handleError(ctx context.Context, err error, msg s
 		}
 	}
 
+	fmt.Println("RANDOM ERROR", msg, err)
 	log.Error(err, msg)
 	return ctrl.Result{}, err
 }

@@ -106,7 +106,14 @@ func (w *WASI) init(files map[string][]byte) error {
 		w.sourceSpec = append(w.sourceSpec, key)
 	}
 
-	err := w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI])
+	permissions := make(map[string]struct{})
+	for _, perm := range w.Spec().Controller.WASI.Resources {
+		for _, method := range perm.Methods {
+			permissions[perm.String()+"."+string(method)] = struct{}{}
+		}
+	}
+
+	err := w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI], permissions)
 	if err != nil {
 		return fmt.Errorf("WASI.init: error loading wasi module: %w", err)
 	}

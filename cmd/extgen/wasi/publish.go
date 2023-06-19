@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go"
@@ -34,6 +35,11 @@ func publish() *cli.Command {
 				Name:      "docs",
 				Usage:     "Path to docs directory",
 				TakesFile: true,
+			},
+			&cli.StringFlag{
+				Name:     "tag",
+				Usage:    "Name and optionally a tag in the `name:tag` format",
+				Required: true,
 			},
 		},
 		Before: func(c *cli.Context) error {
@@ -60,6 +66,11 @@ func publish() *cli.Command {
 			ctx := c.Context
 
 			fs := memory.New()
+
+			name, tag, err := parseTag(c.String("tag"))
+			if err != nil {
+				return err
+			}
 
 			b, err := os.ReadFile(c.Args().First())
 			if err != nil {
@@ -143,7 +154,6 @@ func publish() *cli.Command {
 				panic(err)
 			}
 
-			tag := "latest"
 			if err = fs.Tag(ctx, manifestDesc, tag); err != nil {
 				return err
 			}
@@ -155,8 +165,7 @@ func publish() *cli.Command {
 			}
 
 			// 3.2. Connect to a remote repository
-			reg := "ghcr.io"
-			repo, err := remote.NewRepository(reg + "/suffiks/suffiks/test")
+			repo, err := remote.NewRepository(name)
 			if err != nil {
 				panic(err)
 			}
@@ -186,4 +195,16 @@ func pushBlob(ctx context.Context, mediaType string, blob []byte, target oras.Ta
 		Size:      int64(len(blob)),
 	}
 	return desc, target.Push(ctx, desc, bytes.NewReader(blob))
+}
+
+// Parse tag into name and reference, with default reference "latest"
+func parseTag(tag string) (name, ref string, err error) {
+	parts := strings.Split(tag, ":")
+	if len(parts) == 1 {
+		return parts[0], "latest", nil
+	}
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid tag %q, expected name:tag", tag)
+	}
+	return parts[0], parts[1], nil
 }

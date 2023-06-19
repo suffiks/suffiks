@@ -71,54 +71,63 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      app.Name,
 				Namespace: app.Namespace,
-				Labels:    make(map[string]string),
 			},
-			Spec: corev1.ServiceSpec{
-				Ports: []corev1.ServicePort{
-					{
-						Name:       "http",
-						Port:       80,
-						TargetPort: intstr.FromInt(spec.Port),
-					},
+		}
+		if err := a.Client.Get(ctx, client.ObjectKeyFromObject(svc), svc); err != nil && !errors.IsNotFound(err) {
+			span.RecordError(err)
+			return fmt.Errorf("error getting service: %w", err)
+		}
+
+		update := err == nil || !errors.IsNotFound(err)
+		svc.Spec = corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(spec.Port),
 				},
-				Selector: map[string]string{
-					"app": app.Name,
-				},
+			},
+			Selector: map[string]string{
+				"app": app.Name,
 			},
 		}
 		for k, v := range depl.Labels {
 			svc.Labels[k] = v
 		}
 
-		if err := a.Client.Create(ctx, svc); err != nil {
-			if errors.IsAlreadyExists(err) {
-				span.SetAttributes(attribute.String("action", "update svc"))
-				if err := a.Client.Update(ctx, svc); err != nil {
-					span.RecordError(err)
-					return fmt.Errorf("Reconcile update svc: %w", err)
-				}
-			} else {
+		if update {
+			span.SetAttributes(attribute.String("action", "update svc"))
+			if err := a.Client.Update(ctx, svc); err != nil {
 				span.RecordError(err)
-				return fmt.Errorf("Reconcile create svc: %w", err)
+				return fmt.Errorf("Reconcile update svc: %w", err)
 			}
 		} else {
 			span.SetAttributes(attribute.String("action", "create svc"))
+			if err := a.Client.Create(ctx, svc); err != nil {
+				span.RecordError(err)
+				return fmt.Errorf("Reconcile create svc: %w", err)
+			}
 		}
 	}
 
-	if err := a.Client.Create(ctx, depl); err != nil {
-		if errors.IsAlreadyExists(err) {
-			span.SetAttributes(attribute.String("action", "update depl"))
-			if err := a.Client.Update(ctx, depl); err != nil {
-				span.RecordError(err)
-				return fmt.Errorf("Reconcile update depl: %w", err)
-			}
-		} else {
+	existingDepl := &appsv1.Deployment{}
+	if err := a.Client.Get(ctx, client.ObjectKeyFromObject(depl), existingDepl); err != nil && !errors.IsNotFound(err) {
+		span.RecordError(err)
+		return fmt.Errorf("error getting deployment: %w", err)
+	}
+
+	if err == nil {
+		depl.Generation = existingDepl.Generation
+		span.SetAttributes(attribute.String("action", "update deployment"))
+		if err := a.Client.Update(ctx, depl); err != nil {
 			span.RecordError(err)
-			return fmt.Errorf("Reconcile create depl: %w", err)
+			return fmt.Errorf("Reconcile update deployment: %w", err)
 		}
 	} else {
-		span.SetAttributes(attribute.String("action", "create depl"))
+		if err := a.Client.Create(ctx, depl); err != nil {
+			span.RecordError(err)
+			return fmt.Errorf("Reconcile create deployment: %w", err)
+		}
 	}
 	return nil
 }
@@ -154,11 +163,16 @@ func (a *AppReconciler) IsModified(ctx context.Context, app *suffiksv1.Applicati
 			return false, err
 		}
 
-		// TODO(thokra): We don't yet create services
-		if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
-			return true, nil
-		} else if err != nil {
+		spec, err := app.WellKnownSpec()
+		if err != nil {
 			return false, err
+		}
+		if spec.Port > 0 {
+			if err := a.Client.Get(ctx, ok, &corev1.Service{}); err != nil && errors.IsNotFound(err) {
+				return true, nil
+			} else if err != nil {
+				return false, err
+			}
 		}
 		return false, nil
 	}

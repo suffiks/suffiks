@@ -4,6 +4,7 @@
 - [ ] Rescue from panics in extensions.
 - [ ] Remove `Status.Hash` requirement. Possibly allowing extensions to set statuses etc as well.
 - [ ] Status and metrics support for extensions
+- [ ] Support for reloading WASI extensions when the version changes.
 
 Probably not:
 

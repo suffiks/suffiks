@@ -7,20 +7,27 @@ import (
 	"log"
 	"os"
 	"sync"
+	"unicode"
+
+	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/tracing"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
+	"github.com/tetratelabs/wazero"
+	"github.com/tetratelabs/wazero/api"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 
 	// Until client-go is updated to use the new proto, we need to use the old one.
 	golangproto "github.com/golang/protobuf/proto"
-
-	"github.com/suffiks/suffiks/extension/protogen"
-	"github.com/tetratelabs/wazero"
-	"github.com/tetratelabs/wazero/api"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 )
 
 type Responder interface {
@@ -28,6 +35,8 @@ type Responder interface {
 }
 
 type Runner struct {
+	name       string
+	version    string
 	runtime    wazero.Runtime
 	controller *Controller
 	module     wazero.CompiledModule
@@ -35,7 +44,9 @@ type Runner struct {
 	validationRequest *protogen.ValidationRequest
 	syncRequest       *protogen.SyncRequest
 
-	client dynamic.Interface
+	client             dynamic.Interface
+	clientPermissions  map[string]struct{}
+	configMapReference *suffiksv1.ConfigMapReference
 
 	msgs             chan *protogen.Response
 	lock             sync.Mutex
@@ -48,7 +59,18 @@ func (r *Runner) Close(ctx context.Context) error {
 	return nil
 }
 
+func (r *Runner) spanAttributes(span trace.Span) {
+	span.SetAttributes(
+		attribute.String("name", r.name),
+		attribute.String("version", r.version),
+	)
+}
+
 func (r *Runner) instance(ctx context.Context) (api.Module, error) {
+	ctx, span := tracing.Start(ctx, "WASI.Instance")
+	defer span.End()
+	r.spanAttributes(span)
+
 	mod := r.runtime.NewHostModuleBuilder("suffiks")
 
 	funcs := map[string]any{
@@ -65,8 +87,8 @@ func (r *Runner) instance(ctx context.Context) (api.Module, error) {
 		"GetOld":           r.getOld,
 		"CreateResource":   r.createResource,
 		"UpdateResource":   r.updateResource,
-		// "DeleteResource": r.deleteResource,
-		"GetResource": r.getResource,
+		"DeleteResource":   r.deleteResource,
+		"GetResource":      r.getResource,
 	}
 	for name, fn := range funcs {
 		mod = mod.NewFunctionBuilder().WithFunc(fn).Export(name)
@@ -80,10 +102,36 @@ func (r *Runner) instance(ctx context.Context) (api.Module, error) {
 		WithStdout(os.Stdout).
 		WithStderr(os.Stderr)
 
+	if r.configMapReference != nil {
+		cmu, err := r.client.Resource(schema.GroupVersionResource{
+			Group:    "",
+			Version:  "v1",
+			Resource: "configmaps",
+		}).Namespace(r.configMapReference.Namespace).Get(ctx, r.configMapReference.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("get configmap: %w", err)
+		}
+
+		var cm corev1.ConfigMap
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(cmu.Object, &cm); err != nil {
+			return nil, fmt.Errorf("convert configmap: %w", err)
+		}
+
+		for k, v := range cm.Data {
+			if isUpper(k) {
+				cfg = cfg.WithEnv(k, v)
+			}
+		}
+	}
+
 	return r.runtime.InstantiateModule(ctx, r.module, cfg)
 }
 
 func (r *Runner) Validate(ctx context.Context, req *protogen.ValidationRequest) ([]*protogen.ValidationError, error) {
+	ctx, span := tracing.Start(ctx, "WASI.Validate")
+	defer span.End()
+	r.spanAttributes(span)
+
 	mod, err := r.instance(ctx)
 	if err != nil {
 		return nil, err
@@ -99,6 +147,10 @@ func (r *Runner) Validate(ctx context.Context, req *protogen.ValidationRequest) 
 }
 
 func (r *Runner) Defaulting(ctx context.Context, req *protogen.SyncRequest) (*protogen.DefaultResponse, error) {
+	ctx, span := tracing.Start(ctx, "WASI.Defaulting")
+	defer span.End()
+	r.spanAttributes(span)
+
 	mod, err := r.instance(ctx)
 	if err != nil {
 		return nil, err
@@ -150,6 +202,10 @@ func (r *response) Recv() (*protogen.Response, error) {
 }
 
 func (r *Runner) Sync(ctx context.Context, req *protogen.SyncRequest) (Responder, error) {
+	ctx, span := tracing.Start(ctx, "WASI.Sync")
+	defer span.End()
+	r.spanAttributes(span)
+
 	res := &response{
 		chn:    make(chan *protogen.Response, 1),
 		errors: make(chan error, 1),
@@ -179,6 +235,10 @@ func (r *Runner) Sync(ctx context.Context, req *protogen.SyncRequest) (Responder
 }
 
 func (r *Runner) Delete(ctx context.Context, req *protogen.SyncRequest) error {
+	ctx, span := tracing.Start(ctx, "WASI.Delete")
+	defer span.End()
+	r.spanAttributes(span)
+
 	mod, err := r.instance(ctx)
 	if err != nil {
 		return err
@@ -190,7 +250,9 @@ func (r *Runner) Delete(ctx context.Context, req *protogen.SyncRequest) error {
 	return err
 }
 
-func (r *Runner) addEnv(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addEnv(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addEnv")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_Env{
 			Env: unmarshalProto(m, &protogen.KeyValue{}, ptr, size),
@@ -198,7 +260,9 @@ func (r *Runner) addEnv(_ context.Context, m api.Module, ptr, size uint32) {
 	}
 }
 
-func (r *Runner) addEnvFrom(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addEnvFrom(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addEnvFrom")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_EnvFrom{
 			EnvFrom: unmarshalProto(m, &protogen.EnvFrom{}, ptr, size),
@@ -206,7 +270,9 @@ func (r *Runner) addEnvFrom(_ context.Context, m api.Module, ptr, size uint32) {
 	}
 }
 
-func (r *Runner) addLabel(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addLabel(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addLabel")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_Label{
 			Label: unmarshalProto(m, &protogen.KeyValue{}, ptr, size),
@@ -214,7 +280,9 @@ func (r *Runner) addLabel(_ context.Context, m api.Module, ptr, size uint32) {
 	}
 }
 
-func (r *Runner) addAnnotation(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addAnnotation(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addAnnotation")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_Annotation{
 			Annotation: unmarshalProto(m, &protogen.KeyValue{}, ptr, size),
@@ -222,23 +290,29 @@ func (r *Runner) addAnnotation(_ context.Context, m api.Module, ptr, size uint32
 	}
 }
 
-func (r *Runner) addInitContainer(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addInitContainer(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addInitContainer")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_InitContainer{
-			InitContainer: unmarshalClientGoProto(m, &v1.Container{}, ptr, size),
+			InitContainer: unmarshalClientGoProto(m, &corev1.Container{}, ptr, size),
 		},
 	}
 }
 
-func (r *Runner) addSidecar(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) addSidecar(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addSidecar")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_Container{
-			Container: unmarshalClientGoProto(m, &v1.Container{}, ptr, size),
+			Container: unmarshalClientGoProto(m, &corev1.Container{}, ptr, size),
 		},
 	}
 }
 
-func (r *Runner) mergePatch(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) mergePatch(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("addMergePatch")
 	b, ok := m.Memory().Read(ptr, size)
 	if !ok {
 		panic("failed to read memory")
@@ -252,6 +326,9 @@ func (r *Runner) mergePatch(_ context.Context, m api.Module, ptr, size uint32) {
 }
 
 func (r *Runner) getOwner(ctx context.Context, m api.Module) uint32 {
+	span := tracing.Get(ctx)
+	span.AddEvent("getOwner")
+
 	var owner *protogen.Owner
 
 	if r.syncRequest != nil {
@@ -266,6 +343,9 @@ func (r *Runner) getOwner(ctx context.Context, m api.Module) uint32 {
 }
 
 func (r *Runner) getSpec(ctx context.Context, m api.Module) uint32 {
+	span := tracing.Get(ctx)
+	span.AddEvent("getSpec")
+
 	var b []byte
 	if r.syncRequest != nil {
 		b = r.syncRequest.Spec
@@ -279,6 +359,9 @@ func (r *Runner) getSpec(ctx context.Context, m api.Module) uint32 {
 }
 
 func (r *Runner) getOld(ctx context.Context, m api.Module) uint32 {
+	span := tracing.Get(ctx)
+	span.AddEvent("getOld")
+
 	if r.validationRequest == nil {
 		panic("getOld is only valid for validation requests")
 	}
@@ -286,7 +369,10 @@ func (r *Runner) getOld(ctx context.Context, m api.Module) uint32 {
 	return writeByteSlice(ctx, m, r.validationRequest.Old.Spec)
 }
 
-func (r *Runner) validationError(_ context.Context, m api.Module, ptr, size uint32) {
+func (r *Runner) validationError(ctx context.Context, m api.Module, ptr, size uint32) {
+	span := tracing.Get(ctx)
+	span.AddEvent("validationError")
+
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -297,19 +383,31 @@ func (r *Runner) validationError(_ context.Context, m api.Module, ptr, size uint
 }
 
 func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint32 {
+	ctx, span := tracing.Start(ctx, "WASI.GetResource")
+	defer span.End()
+	r.spanAttributes(span)
+
+	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	if err := r.isAllowed(ctx, gvr, "get"); err != nil {
+		log.Println(err)
+		return uint32(toClientError(err))
+	}
+
 	nameb, ok := m.Memory().Read(namePtr, nameSize)
 	if !ok {
 		panic("failed to read memory")
 	}
 
-	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	span.SetAttributes(attribute.String("resource.name", string(nameb)), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
+
 	resource, err := r.client.Resource(schema.GroupVersionResource{
 		Group:    gvr.Group,
 		Version:  gvr.Version,
 		Resource: gvr.Resource,
 	}).Namespace(r.syncRequest.Owner.Namespace).Get(ctx, string(nameb), metav1.GetOptions{})
 	if err != nil {
-		panic("failed to get resource: " + err.Error())
+		log.Println(err)
+		return uint32(toClientError(err))
 	}
 
 	b, err := resource.MarshalJSON()
@@ -321,8 +419,47 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	return writeByteSlice(ctx, m, b)
 }
 
-func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint32 {
+func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint32 {
+	ctx, span := tracing.Start(ctx, "WASI.DeleteResource")
+	defer span.End()
+	r.spanAttributes(span)
+
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	if err := r.isAllowed(ctx, gvr, "delete"); err != nil {
+		log.Println(err)
+		return uint32(toClientError(err))
+	}
+
+	nameb, ok := m.Memory().Read(namePtr, nameSize)
+	if !ok {
+		panic("failed to read memory")
+	}
+
+	span.SetAttributes(attribute.String("resource.name", string(nameb)), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
+
+	err := r.client.Resource(schema.GroupVersionResource{
+		Group:    gvr.Group,
+		Version:  gvr.Version,
+		Resource: gvr.Resource,
+	}).Namespace(r.syncRequest.Owner.Namespace).Delete(ctx, string(nameb), metav1.DeleteOptions{})
+	if err != nil {
+		log.Println(err)
+		return uint32(toClientError(err))
+	}
+	return 0
+}
+
+func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint32 {
+	ctx, span := tracing.Start(ctx, "WASI.CreateResource")
+	defer span.End()
+	r.spanAttributes(span)
+
+	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	if err := r.isAllowed(ctx, gvr, "create"); err != nil {
+		log.Println(err)
+		return uint32(toClientError(err))
+	}
+
 	b, ok := m.Memory().Read(specPtr, specSize)
 	if !ok {
 		panic("failed to read memory")
@@ -333,6 +470,7 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 		panic("failed to unmarshal resource: " + err.Error())
 	}
 
+	span.SetAttributes(attribute.String("resource.name", resource.GetName()), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 	// TODO: Is there some way to create a dynamic lister for any resouce requested?
 	n, err := r.client.Resource(schema.GroupVersionResource{
 		Group:    gvr.Group,
@@ -353,7 +491,16 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 }
 
 func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint32 {
+	ctx, span := tracing.Start(ctx, "WASI.UpdateResource")
+	defer span.End()
+	r.spanAttributes(span)
+
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	if err := r.isAllowed(ctx, gvr, "update"); err != nil {
+		log.Println(err)
+		return uint32(toClientError(err))
+	}
+
 	b, ok := m.Memory().Read(specPtr, specSize)
 	if !ok {
 		panic("failed to read memory")
@@ -364,6 +511,7 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 		panic("failed to unmarshal resource: " + err.Error())
 	}
 
+	span.SetAttributes(attribute.String("resource.name", resource.GetName()), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 	// TODO: Is there some way to create a dynamic lister for any resouce requested?
 	n, err := r.client.Resource(schema.GroupVersionResource{
 		Group:    gvr.Group,
@@ -381,6 +529,27 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	}
 
 	return writeByteSlice(ctx, m, b)
+}
+
+func (r *Runner) isAllowed(ctx context.Context, gvr *metav1.GroupVersionResource, method string) error {
+	span := tracing.Get(ctx)
+	span.SetAttributes(
+		attribute.String("resource.group", gvr.Group),
+		attribute.String("resource.version", gvr.Version),
+		attribute.String("resource.resource", gvr.Resource),
+		attribute.String("resource.method", method),
+	)
+
+	if r.clientPermissions != nil {
+		_, ok := r.clientPermissions[gvr.Group+"/"+gvr.Version+"/"+gvr.Resource+"."+method]
+		if ok {
+			return nil
+		}
+	}
+
+	err := fmt.Errorf("extension is not configured to access this resource with method %q", method)
+	span.RecordError(err)
+	return apierrors.NewForbidden(schema.GroupResource{Group: gvr.Group, Resource: gvr.Resource}, "", err)
 }
 
 func unmarshalProto[T protoreflect.ProtoMessage](m api.Module, v T, ptr, size uint32) T {
@@ -440,3 +609,12 @@ func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint32 {
 
 // 	return string(b), nil
 // }
+
+func isUpper(s string) bool {
+	for _, r := range s {
+		if !unicode.IsUpper(r) && unicode.IsLetter(r) {
+			return false
+		}
+	}
+	return true
+}

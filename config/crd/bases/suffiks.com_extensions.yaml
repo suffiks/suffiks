@@ -69,23 +69,31 @@ spec:
                     type: object
                   wasi:
                     properties:
+                      configMap:
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
                       image:
                         type: string
                       resources:
                         items:
                           properties:
-                            configMap:
-                              type: string
                             group:
                               pattern: ^[a-z]([-a-z0-9\.]*[a-z0-9])?$
                               type: string
                             methods:
                               items:
                                 enum:
-                                - Get
-                                - Create
-                                - Update
-                                - Delete
+                                - get
+                                - create
+                                - update
+                                - delete
                                 type: string
                               type: array
                             resource:

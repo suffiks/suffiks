@@ -20,7 +20,7 @@ func (e ExtensionGRPCController) Target() string {
 	return net.JoinHostPort(e.Service+"."+e.Namespace, strconv.Itoa(e.Port))
 }
 
-// +kubebuilder:validation:Enum=Get;Create;Update;Delete
+// +kubebuilder:validation:Enum=get;create;update;delete
 type Method string
 
 type ExtensionWASIControllerResource struct {
@@ -32,8 +32,17 @@ type ExtensionWASIControllerResource struct {
 	Resource string `json:"resource"`
 	// +required
 	Methods []Method `json:"methods"`
-	// +optional
-	ConfigMap string `json:"configMap,omitempty"`
+}
+
+func (e ExtensionWASIControllerResource) String() string {
+	return e.Group + "/" + e.Version + "/" + e.Resource
+}
+
+type ConfigMapReference struct {
+	// +required
+	Name string `json:"name"`
+	// +required
+	Namespace string `json:"namespace"`
 }
 
 type ExtensionWASIController struct {
@@ -41,6 +50,8 @@ type ExtensionWASIController struct {
 	Tag   string `json:"tag"`
 	// +optional
 	Resources []ExtensionWASIControllerResource `json:"resources,omitempty"`
+	// +optional
+	ConfigMap *ConfigMapReference `json:"configMap,omitempty"`
 }
 
 func (e *ExtensionWASIController) ImageTag() string {

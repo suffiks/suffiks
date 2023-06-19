@@ -1,8 +1,11 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
+	"time"
 
+	"github.com/suffiks/suffiks/internal/extension/oci"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +42,7 @@ func (r *Extension) validateSpec() (allErrs field.ErrorList) {
 	validations := []func() *field.Error{
 		r.validateSpecTarget,
 		r.validateSpecOpenAPIV3Schema,
+		r.validateWASIImage,
 	}
 
 	for _, v := range validations {
@@ -73,6 +77,25 @@ func (r *Extension) validateSpecOpenAPIV3Schema() *field.Error {
 	if len(props.Properties) == 0 && !r.Spec.Always {
 		return field.Invalid(fieldPath, string(r.Spec.OpenAPIV3Schema.Raw), "Must have at least one property or have Always set to true")
 	}
+	return nil
+}
+
+func (r *Extension) validateWASIImage() *field.Error {
+	if r.Spec.Controller.WASI == nil {
+		return nil
+	}
+
+	if r.Spec.Controller.WASI.Image == "" {
+		return field.Invalid(field.NewPath("spec", "controller", "wasi", "image"), r.Spec.Controller.WASI.Image, "Must be a valid image")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	_, err := oci.Get(ctx, r.Spec.Controller.WASI.Image, r.Spec.Controller.WASI.Tag)
+	if err != nil {
+		return field.Invalid(field.NewPath("spec", "controller", "wasi", "image"), r.Spec.Controller.WASI.Image, err.Error())
+	}
+
 	return nil
 }
 

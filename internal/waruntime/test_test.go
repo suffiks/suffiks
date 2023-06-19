@@ -26,7 +26,13 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := r.Load(ctx, "test", "0.1.1", b); err != nil {
+	perm := map[string]struct{}{
+		"networking.k8s.io/v1/ingresses.create": {},
+		"networking.k8s.io/v1/ingresses.get":    {},
+		"networking.k8s.io/v1/ingresses.update": {},
+	}
+
+	if err := r.Load(ctx, "test", "0.1.1", b, perm); err != nil {
 		t.Fatal(err)
 	}
 

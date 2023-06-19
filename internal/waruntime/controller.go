@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
@@ -12,8 +13,10 @@ import (
 )
 
 type extension struct {
-	version string
-	module  wazero.CompiledModule
+	version            string
+	module             wazero.CompiledModule
+	clientPermissions  map[string]struct{}
+	configMapReference *suffiksv1.ConfigMapReference
 }
 
 type Controller struct {
@@ -33,7 +36,7 @@ func New(ctx context.Context) *Controller {
 }
 
 func (c *Controller) NewRunner(ctx context.Context, extension string, client dynamic.Interface) (*Runner, error) {
-	m, _, ok := c.getModule(extension)
+	ext, ok := c.getModule(extension)
 
 	if !ok {
 		return nil, fmt.Errorf("%w: %v", ErrExtensionNotFound, extension)
@@ -44,10 +47,14 @@ func (c *Controller) NewRunner(ctx context.Context, extension string, client dyn
 	wasi_snapshot_preview1.MustInstantiate(ctx, r)
 
 	return &Runner{
-		controller: c,
-		module:     m,
-		runtime:    r,
-		client:     client,
+		name:               extension,
+		version:            ext.version,
+		controller:         c,
+		module:             ext.module,
+		runtime:            r,
+		client:             client,
+		clientPermissions:  ext.clientPermissions,
+		configMapReference: ext.configMapReference,
 	}, nil
 }
 
@@ -55,20 +62,17 @@ func (c *Controller) Close(ctx context.Context) error {
 	return c.cache.Close(ctx)
 }
 
-func (c *Controller) getModule(name string) (module wazero.CompiledModule, version string, ok bool) {
+func (c *Controller) getModule(name string) (ext extension, ok bool) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	ext, ok := c.extensions[name]
-	if !ok {
-		return nil, "", false
-	}
-	return ext.module, ext.version, ok
+	ext, ok = c.extensions[name]
+	return ext, ok
 }
 
-func (c *Controller) Load(ctx context.Context, name, version string, module []byte) error {
-	_, mver, ok := c.getModule(name)
-	if ok && mver == version {
+func (c *Controller) Load(ctx context.Context, name, version string, module []byte, clientPermissions map[string]struct{}) error {
+	ext, ok := c.getModule(name)
+	if ok && ext.version == version {
 		return nil
 	}
 
@@ -96,8 +100,9 @@ func (c *Controller) Load(ctx context.Context, name, version string, module []by
 	}
 
 	c.extensions[name] = extension{
-		version: version,
-		module:  cm,
+		version:           version,
+		module:            cm,
+		clientPermissions: clientPermissions,
 	}
 
 	return nil

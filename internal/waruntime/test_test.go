@@ -32,7 +32,7 @@ func TestRun(t *testing.T) {
 		"networking.k8s.io/v1/ingresses.update": {},
 	}
 
-	if err := r.Load(ctx, "test", "0.1.1", b, perm); err != nil {
+	if err := r.Load(ctx, "test", "0.1.1", b, perm, nil); err != nil {
 		t.Fatal(err)
 	}
 

@@ -3,8 +3,10 @@ package wasi
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -16,6 +18,7 @@ import (
 	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/suffiks/suffiks/pkg/client/clientset/versioned/scheme"
 	"github.com/urfave/cli/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +36,7 @@ type validateTest struct {
 	Resource *unstructured.Unstructured `yaml:"resource"`
 	Invalid  bool                       `yaml:"invalid"`
 	Old      *unstructured.Unstructured `yaml:"old"`
-	// Type is the type of validation to perform. It can be either "create" or "update". Defaults to "create".
+	// Type is the type of validation to perform. It can be either "create", "update" or "delete". Defaults to "create".
 	Type string `yaml:"type"`
 }
 
@@ -81,21 +84,34 @@ func (t test) Test(ctx context.Context, ctrl *controller.ExtensionController, cl
 
 func (t test) validate(ctx context.Context, ctrl *controller.ExtensionController) bool {
 	typ := protogen.ValidationType_CREATE
-	if t.Validate.Type == "update" {
+	switch t.Validate.Type {
+	case "create":
+	case "update":
 		typ = protogen.ValidationType_UPDATE
+	case "delete":
+		typ = protogen.ValidationType_DELETE
+	default:
+		printLog(t.Name, "Invalid validation type: %q, expected 'create', 'update', 'delete'", t.Validate.Type)
+		return false
 	}
+
 	verboseLog(ctx, t.Name, "Validate (%v)", typ)
 
 	var old controller.Object
-	if t.Validate.Type == "update" {
+	newO := newObject(t.Validate.Resource)
+	switch t.Validate.Type {
+	case "update":
 		if t.Validate.Old == nil {
 			old = newObject(t.Validate.Resource)
 		} else {
 			old = newObject(t.Validate.Old)
 		}
+	case "delete":
+		old = newO
+		newO = nil
 	}
 
-	err := ctrl.Validate(ctx, typ, newObject(t.Validate.Resource), old)
+	err := ctrl.Validate(ctx, typ, newO, old)
 	if err != nil {
 		if t.Validate.Invalid {
 			verboseLog(ctx, t.Name, "Expected error: %v", err)
@@ -250,8 +266,8 @@ func verboseLog(ctx context.Context, name, format string, args ...any) {
 }
 
 type tests struct {
-	ConfigMap *unstructured.Unstructured `yaml:"configMap"`
-	Tests     []test                     `yaml:"tests"`
+	Config map[string]string `yaml:"config"`
+	Tests  []test            `yaml:"tests"`
 }
 
 func testCmd() *cli.Command {
@@ -283,29 +299,16 @@ func testCmd() *cli.Command {
 			},
 		},
 		Action: func(c *cli.Context) error {
-			b, err := os.ReadFile("./tests/test.yaml")
-			if err != nil {
-				return fmt.Errorf("failed to read test file: %w", err)
-			}
+			log.SetFlags(0)
 
-			var t tests
-			if err := yaml.Unmarshal(b, &t); err != nil {
-				return fmt.Errorf("failed to unmarshal test file: %w", err)
+			ctx := c.Context
+			if c.Bool("verbose") {
+				ctx = context.WithValue(c.Context, ctxKey("verbose"), true)
 			}
-
-			client := fake.NewSimpleDynamicClient(runtime.NewScheme())
-			mgr, err := extension.NewExtensionManager(
-				context.Background(),
-				suffiks.CRDFiles,
-				client,
-				extension.WithWASILoader(loader(c.Args().First())),
-			)
-			if err != nil {
-				return fmt.Errorf("failed to create extension manager: %w", err)
-			}
+			wasi := loader(c.Args().First())
 
 			var extObj suffiksv1.Extension
-			b, err = os.ReadFile(c.String("ext"))
+			b, err := os.ReadFile(c.String("ext"))
 			if err != nil {
 				return fmt.Errorf("failed to read extension file: %w", err)
 			}
@@ -313,25 +316,80 @@ func testCmd() *cli.Command {
 				return fmt.Errorf("failed to unmarshal extension file: %w", err)
 			}
 
-			if err := mgr.Add(extObj); err != nil {
-				return fmt.Errorf("failed to add extension: %w", err)
-			}
-
-			ctrl := controller.NewExtensionController(mgr)
-
-			ctx := c.Context
-			if c.Bool("verbose") {
-				ctx = context.WithValue(c.Context, ctxKey("verbose"), true)
-			}
-
-			for _, test := range t.Tests {
-				if !test.Test(ctx, ctrl, client) {
-					return fmt.Errorf("test failed: %s", test.Name)
+			return filepath.WalkDir(c.String("tests"), func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
 				}
-			}
-			return nil
+
+				if d.IsDir() || filepath.Ext(path) != ".yaml" {
+					return nil
+				}
+				log.Println("Running", path)
+				if err := testFile(ctx, wasi, extObj, path); err != nil {
+					return fmt.Errorf("%v: %w", path, err)
+				}
+				return nil
+			})
 		},
 	}
+}
+
+func testFile(ctx context.Context, wasi extension.WASILoader, extObj suffiksv1.Extension, testPath string) error {
+	b, err := os.ReadFile(testPath)
+	if err != nil {
+		return fmt.Errorf("failed to read test file: %w", err)
+	}
+
+	var t tests
+	if err := yaml.Unmarshal(b, &t); err != nil {
+		return fmt.Errorf("failed to unmarshal test file: %w", err)
+	}
+
+	var objs []runtime.Object
+	if len(t.Config) > 0 {
+		switch {
+		case extObj.Spec.Controller.WASI.ConfigMap == nil:
+			return fmt.Errorf("config not supported when no config map is defined in the extension CRD")
+		case extObj.Spec.Controller.WASI.ConfigMap.Name == "":
+			return fmt.Errorf("config not supported when no config map name is defined in the extension CRD")
+		case extObj.Spec.Controller.WASI.ConfigMap.Namespace == "":
+			return fmt.Errorf("config not supported when no config map namespace is defined in the extension CRD")
+		}
+
+		cm := corev1.ConfigMap{}
+		cm.SetName(extObj.Spec.Controller.WASI.ConfigMap.Name)
+		cm.SetNamespace(extObj.Spec.Controller.WASI.ConfigMap.Namespace)
+		cm.Data = t.Config
+		objs = append(objs, &cm)
+
+		verboseLog(ctx, testPath, "Created config %q in %q", cm.GetName(), cm.GetNamespace())
+	}
+
+	scheme := runtime.NewScheme()
+	_ = corev1.AddToScheme(scheme)
+	client := fake.NewSimpleDynamicClient(scheme, objs...)
+	mgr, err := extension.NewExtensionManager(
+		context.Background(),
+		suffiks.CRDFiles,
+		client,
+		extension.WithWASILoader(wasi),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create extension manager: %w", err)
+	}
+
+	if err := mgr.Add(extObj); err != nil {
+		return fmt.Errorf("failed to add extension: %w", err)
+	}
+
+	ctrl := controller.NewExtensionController(mgr)
+
+	for _, test := range t.Tests {
+		if !test.Test(ctx, ctrl, client) {
+			return fmt.Errorf("test failed: %s", test.Name)
+		}
+	}
+	return nil
 }
 
 func loader(path string) extension.WASILoader {

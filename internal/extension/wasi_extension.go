@@ -113,7 +113,7 @@ func (w *WASI) init(files map[string][]byte) error {
 		}
 	}
 
-	err := w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI], permissions)
+	err := w.controller.Load(context.Background(), w.Name(), w.Spec().Controller.WASI.ImageTag(), files[oci.MediaTypeWASI], permissions, w.Spec().Controller.WASI.ConfigMap)
 	if err != nil {
 		return fmt.Errorf("WASI.init: error loading wasi module: %w", err)
 	}

@@ -70,7 +70,7 @@ func (c *Controller) getModule(name string) (ext extension, ok bool) {
 	return ext, ok
 }
 
-func (c *Controller) Load(ctx context.Context, name, version string, module []byte, clientPermissions map[string]struct{}) error {
+func (c *Controller) Load(ctx context.Context, name, version string, module []byte, clientPermissions map[string]struct{}, configMapReference *suffiksv1.ConfigMapReference) error {
 	ext, ok := c.getModule(name)
 	if ok && ext.version == version {
 		return nil
@@ -100,9 +100,10 @@ func (c *Controller) Load(ctx context.Context, name, version string, module []by
 	}
 
 	c.extensions[name] = extension{
-		version:           version,
-		module:            cm,
-		clientPermissions: clientPermissions,
+		version:            version,
+		module:             cm,
+		clientPermissions:  clientPermissions,
+		configMapReference: configMapReference,
 	}
 
 	return nil

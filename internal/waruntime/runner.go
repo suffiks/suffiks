@@ -349,10 +349,10 @@ func (r *Runner) getSpec(ctx context.Context, m api.Module) uint32 {
 	var b []byte
 	if r.syncRequest != nil {
 		b = r.syncRequest.Spec
-	} else if r.validationRequest != nil {
+	} else if r.validationRequest != nil && r.validationRequest.Sync != nil {
 		b = r.validationRequest.Sync.Spec
 	} else {
-		panic("getSpec is only valid in this context")
+		panic("getSpec is not valid in this context")
 	}
 
 	return writeByteSlice(ctx, m, b)

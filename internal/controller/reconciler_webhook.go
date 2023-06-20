@@ -34,7 +34,7 @@ func (r *ReconcilerWrapper[V]) validate(ctx context.Context, typ protogen.Valida
 
 	ctx, span := tracing.Start(ctx, "Validate")
 	defer span.End()
-	span.SetAttributes(attribute.String("type", string(typ)), attribute.String("kind", kind))
+	span.SetAttributes(attribute.String("type", protogen.ValidationType_name[int32(typ)]), attribute.String("kind", kind))
 
 	if nn, ok := newObj.(namespaceName); ok {
 		span.SetAttributes(attribute.String("name", nn.GetName()), attribute.String("namespace", nn.GetNamespace()))

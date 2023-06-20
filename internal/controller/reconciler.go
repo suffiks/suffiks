@@ -198,7 +198,6 @@ func (r *ReconcilerWrapper[V]) handleError(ctx context.Context, err error, msg s
 		}
 	}
 
-	fmt.Println("RANDOM ERROR", msg, err)
 	log.Error(err, msg)
 	return ctrl.Result{}, err
 }

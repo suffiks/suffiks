@@ -25,9 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-
-	// Until client-go is updated to use the new proto, we need to use the old one.
-	golangproto "github.com/golang/protobuf/proto"
 )
 
 type Responder interface {
@@ -392,7 +389,7 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	defer span.End()
 	r.spanAttributes(span)
 
-	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	gvr := unmarshalProto(m, &protogen.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "get"); err != nil {
 		log.Println(err)
 		return uint64(toClientError(err))
@@ -406,9 +403,9 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	span.SetAttributes(attribute.String("resource.name", string(nameb)), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 
 	resource, err := r.client.Resource(schema.GroupVersionResource{
-		Group:    gvr.Group,
-		Version:  gvr.Version,
-		Resource: gvr.Resource,
+		Group:    gvr.GetGroup(),
+		Version:  gvr.GetVersion(),
+		Resource: gvr.GetResource(),
 	}).Namespace(r.syncRequest.Owner.Namespace).Get(ctx, string(nameb), metav1.GetOptions{})
 	if err != nil {
 		log.Println(err)
@@ -429,7 +426,7 @@ func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	defer span.End()
 	r.spanAttributes(span)
 
-	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	gvr := unmarshalProto(m, &protogen.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "delete"); err != nil {
 		log.Println(err)
 		return uint64(toClientError(err))
@@ -443,9 +440,9 @@ func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	span.SetAttributes(attribute.String("resource.name", string(nameb)), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 
 	err := r.client.Resource(schema.GroupVersionResource{
-		Group:    gvr.Group,
-		Version:  gvr.Version,
-		Resource: gvr.Resource,
+		Group:    gvr.GetGroup(),
+		Version:  gvr.GetVersion(),
+		Resource: gvr.GetResource(),
 	}).Namespace(r.syncRequest.Owner.Namespace).Delete(ctx, string(nameb), metav1.DeleteOptions{})
 	if err != nil {
 		log.Println(err)
@@ -459,7 +456,7 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	defer span.End()
 	r.spanAttributes(span)
 
-	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	gvr := unmarshalProto(m, &protogen.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "create"); err != nil {
 		log.Println(err)
 		return uint64(toClientError(err))
@@ -478,9 +475,9 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	span.SetAttributes(attribute.String("resource.name", resource.GetName()), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 	// TODO: Is there some way to create a dynamic lister for any resouce requested?
 	n, err := r.client.Resource(schema.GroupVersionResource{
-		Group:    gvr.Group,
-		Version:  gvr.Version,
-		Resource: gvr.Resource,
+		Group:    gvr.GetGroup(),
+		Version:  gvr.GetVersion(),
+		Resource: gvr.GetResource(),
 	}).Namespace(r.syncRequest.Owner.Namespace).Create(ctx, resource, metav1.CreateOptions{})
 	if err != nil {
 		log.Println(err)
@@ -500,7 +497,7 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	defer span.End()
 	r.spanAttributes(span)
 
-	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
+	gvr := unmarshalProto(m, &protogen.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "update"); err != nil {
 		log.Println(err)
 		return uint64(toClientError(err))
@@ -519,9 +516,9 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	span.SetAttributes(attribute.String("resource.name", resource.GetName()), attribute.String("resource.namespace", r.syncRequest.Owner.Namespace))
 	// TODO: Is there some way to create a dynamic lister for any resouce requested?
 	n, err := r.client.Resource(schema.GroupVersionResource{
-		Group:    gvr.Group,
-		Version:  gvr.Version,
-		Resource: gvr.Resource,
+		Group:    gvr.GetGroup(),
+		Version:  gvr.GetVersion(),
+		Resource: gvr.GetResource(),
 	}).Namespace(r.syncRequest.Owner.Namespace).Update(ctx, resource, metav1.UpdateOptions{})
 	if err != nil {
 		log.Println(err)
@@ -536,17 +533,17 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	return writeByteSlice(ctx, m, b)
 }
 
-func (r *Runner) isAllowed(ctx context.Context, gvr *metav1.GroupVersionResource, method string) error {
+func (r *Runner) isAllowed(ctx context.Context, gvr *protogen.GroupVersionResource, method string) error {
 	span := tracing.Get(ctx)
 	span.SetAttributes(
-		attribute.String("resource.group", gvr.Group),
-		attribute.String("resource.version", gvr.Version),
-		attribute.String("resource.resource", gvr.Resource),
+		attribute.String("resource.group", gvr.GetGroup()),
+		attribute.String("resource.version", gvr.GetVersion()),
+		attribute.String("resource.resource", gvr.GetResource()),
 		attribute.String("resource.method", method),
 	)
 
 	if r.clientPermissions != nil {
-		_, ok := r.clientPermissions[gvr.Group+"/"+gvr.Version+"/"+gvr.Resource+"."+method]
+		_, ok := r.clientPermissions[gvr.GetGroup()+"/"+gvr.GetVersion()+"/"+gvr.GetResource()+"."+method]
 		if ok {
 			return nil
 		}
@@ -554,7 +551,7 @@ func (r *Runner) isAllowed(ctx context.Context, gvr *metav1.GroupVersionResource
 
 	err := fmt.Errorf("extension is not configured to access this resource with method %q", method)
 	span.RecordError(err)
-	return apierrors.NewForbidden(schema.GroupResource{Group: gvr.Group, Resource: gvr.Resource}, "", err)
+	return apierrors.NewForbidden(schema.GroupResource{Group: gvr.GetGroup(), Resource: gvr.GetResource()}, "", err)
 }
 
 func unmarshalProto[T protoreflect.ProtoMessage](m api.Module, v T, ptr, size uint32) T {
@@ -564,18 +561,6 @@ func unmarshalProto[T protoreflect.ProtoMessage](m api.Module, v T, ptr, size ui
 	}
 
 	if err := proto.Unmarshal(b, v); err != nil {
-		panic("unable to unmarshal: " + err.Error())
-	}
-	return v
-}
-
-func unmarshalClientGoProto[T golangproto.Message](m api.Module, v T, ptr, size uint32) T {
-	b, ok := m.Memory().Read(ptr, size)
-	if !ok {
-		panic("failed to read memory")
-	}
-
-	if err := golangproto.Unmarshal(b, v); err != nil {
 		panic("unable to unmarshal: " + err.Error())
 	}
 	return v

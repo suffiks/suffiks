@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "k8s.proto";
 
-option go_package = "extension/protogen;protogen";
+option go_package = "github.com/suffiks/suffiks/extension/protogen";
 package extension;
 
 enum ValidationType {

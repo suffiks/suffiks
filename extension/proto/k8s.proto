@@ -1,7 +1,13 @@
 syntax = "proto3";
 
-option go_package = "extension/protogen;protogen";
+option go_package = "github.com/suffiks/suffiks/extension/protogen";
 package extension;
+
+message GroupVersionResource {
+  optional string group = 1;
+  optional string version = 2;
+  optional string resource = 3;
+}
 
 message Container {
   string name = 1;

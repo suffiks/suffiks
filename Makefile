@@ -159,8 +159,10 @@ gen-extensions:
 		-I extension/proto/ \
 		./extension/proto/extension.proto \
 		./extension/proto/k8s.proto \
-		--go_out=. \
-		--go-grpc_out=. \
+		--go_opt=paths=source_relative \
+		--go_out=extension/protogen \
+		--go-grpc_opt=paths=source_relative \
+		--go-grpc_out=extension/protogen \
 
 gen-wasi-env:
 	go run ./cmd/gen_wasi_env > ./extension/wasi/wasi_env.json

@@ -156,7 +156,6 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 ##@ extensions
 gen-extensions:
 	protoc \
-		-I extension/proto/thirdparty \
 		-I extension/proto/ \
 		./extension/proto/extension.proto \
 		./extension/proto/k8s.proto \

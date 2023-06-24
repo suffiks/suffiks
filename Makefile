@@ -158,13 +158,8 @@ gen-extensions:
 	protoc \
 		-I extension/proto/thirdparty \
 		-I extension/proto/ \
-		--go_opt=Mk8s.io/api/core/v1/generated.proto=k8s.io/api/core/v1 \
-		--go_opt=Mk8s.io/apimachinery/pkg/api/resource/generated.proto=k8s.io/apimachinery/pkg/api/resource \
-		--go_opt=Mk8s.io/apimachinery/pkg/apis/meta/v1/generated.proto=k8s.io/apimachinery/pkg/apis/meta/v1 \
-		--go_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=k8s.io/apimachinery/pkg/runtime \
-		--go_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=k8s.io/apimachinery/pkg/runtime/schema \
-		--go_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=k8s.io/apimachinery/pkg/util/intstr \
 		./extension/proto/extension.proto \
+		./extension/proto/k8s.proto \
 		--go_out=. \
 		--go-grpc_out=. \
 

@@ -299,7 +299,7 @@ func (r *Runner) addInitContainer(ctx context.Context, m api.Module, ptr, size u
 	span.AddEvent("addInitContainer")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_InitContainer{
-			InitContainer: unmarshalClientGoProto(m, &corev1.Container{}, ptr, size),
+			InitContainer: unmarshalProto(m, &protogen.Container{}, ptr, size),
 		},
 	}
 }
@@ -309,7 +309,7 @@ func (r *Runner) addSidecar(ctx context.Context, m api.Module, ptr, size uint32)
 	span.AddEvent("addSidecar")
 	r.msgs <- &protogen.Response{
 		OFResponse: &protogen.Response_Container{
-			Container: unmarshalClientGoProto(m, &corev1.Container{}, ptr, size),
+			Container: unmarshalProto(m, &protogen.Container{}, ptr, size),
 		},
 	}
 }

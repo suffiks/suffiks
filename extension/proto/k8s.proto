@@ -1,0 +1,194 @@
+syntax = "proto3";
+
+option go_package = "extension/protogen;protogen";
+package extension;
+
+message Container {
+  string name = 1;
+  string image = 2;
+  repeated string command = 3;
+  repeated string args = 4;
+  string workingDir = 5;
+  repeated ContainerPort ports = 6;
+  repeated EnvFromSource envFrom = 19;
+  repeated EnvVar env = 7;
+  ResourceRequirements resources = 8;
+  repeated VolumeMount volumeMounts = 9;
+  Probe livenessProbe = 10;
+  Probe readinessProbe = 11;
+  Probe startupProbe = 22;
+  Lifecycle lifecycle = 12;
+  string terminationMessagePath = 13;
+  string terminationMessagePolicy = 20;
+  string imagePullPolicy = 14;
+  SecurityContext securityContext = 15;
+}
+
+message ContainerPort {
+  string name = 1;
+  int32 hostPort = 2;
+  int32 containerPort = 3;
+  string protocol = 4;
+  string hostIP = 5;
+}
+
+message EnvFromSource {
+  string prefix = 1;
+  ConfigMapEnvSource configMapRef = 2;
+  SecretEnvSource secretRef = 3;
+}
+
+message EnvVar {
+  string name = 1;
+  string value = 2;
+  EnvVarSource valueFrom = 3;
+}
+
+message ResourceRequirements {
+  map<string, Quantity> limits = 1;
+  map<string, Quantity> requests = 2;
+  repeated ResourceClaim claims = 3;
+}
+
+message VolumeMount {
+  string name = 1;
+  bool readOnly = 2;
+  string mountPath = 3;
+  string subPath = 4;
+}
+
+message Probe {
+  ProbeHandler handler = 1;
+  int32 initialDelaySeconds = 2;
+  int32 timeoutSeconds = 3;
+  int32 periodSeconds = 4;
+  int32 successThreshold = 5;
+  int32 failureThreshold = 6;
+  int64 terminationGracePeriodSeconds = 7;
+}
+
+message ProbeHandler {
+  ExecAction exec = 1;
+  HTTPGetAction httpGet = 2;
+  TCPSocketAction tcpSocket = 3;
+  GRPCAction grpc = 4;
+}
+
+message ExecAction { repeated string command = 1; }
+
+message HTTPGetAction {
+  string path = 1;
+  IntOrString port = 2;
+  string host = 3;
+  string scheme = 4;
+  repeated HTTPHeader httpHeaders = 5;
+}
+
+// HTTPHeader describes a custom header to be used in HTTP probes
+message HTTPHeader {
+  string name = 1;
+  string value = 2;
+}
+
+message TCPSocketAction {
+  IntOrString port = 1;
+  string host = 2;
+}
+
+message GRPCAction {
+  int32 port = 1;
+  string service = 2;
+}
+
+message Lifecycle {
+  LifecycleHandler postStart = 1;
+  LifecycleHandler preStop = 2;
+}
+
+message LifecycleHandler {
+  ExecAction exec = 1;
+  HTTPGetAction httpGet = 2;
+  TCPSocketAction tcpSocket = 3;
+}
+
+message SecurityContext {
+  Capabilities capabilities = 1;
+  bool privileged = 2;
+  SELinuxOptions seLinuxOptions = 3;
+  int64 runAsUser = 4;
+  int64 runAsGroup = 8;
+  bool runAsNonRoot = 5;
+  bool readOnlyRootFilesystem = 6;
+  bool allowPrivilegeEscalation = 7;
+  string procMount = 9;
+  SeccompProfile seccompProfile = 11;
+}
+
+message SecretEnvSource {
+  LocalObjectReference localObjectReference = 1;
+  bool optional = 2;
+}
+
+message ConfigMapEnvSource {
+  LocalObjectReference localObjectReference = 1;
+  bool optional = 2;
+}
+
+message LocalObjectReference { optional string name = 1; }
+
+message EnvVarSource {
+  ObjectFieldSelector fieldRef = 1;
+  ResourceFieldSelector resourceFieldRef = 2;
+  ConfigMapKeySelector configMapKeyRef = 3;
+  SecretKeySelector secretKeyRef = 4;
+}
+
+message ObjectFieldSelector {
+  string apiVersion = 1;
+  string fieldPath = 2;
+}
+
+message ResourceFieldSelector {
+  string containerName = 1;
+  string resource = 2;
+  Quantity divisor = 3;
+}
+
+message ConfigMapKeySelector {
+  LocalObjectReference localObjectReference = 1;
+  string key = 2;
+  bool optional = 3;
+}
+
+message SecretKeySelector {
+  LocalObjectReference localObjectReference = 1;
+  string key = 2;
+  bool optional = 3;
+}
+
+message ResourceClaim { optional string name = 1; }
+
+message Capabilities {
+  repeated string add = 1;
+  repeated string drop = 2;
+}
+
+message SELinuxOptions {
+  string user = 1;
+  string role = 2;
+  string type = 3;
+  string level = 4;
+}
+
+message SeccompProfile {
+  string type = 1;
+  string localhostProfile = 2;
+}
+
+message IntOrString {
+  int64 type = 1;
+  int32 intVal = 2;
+  string strVal = 3;
+}
+
+message Quantity { optional string string = 1; }

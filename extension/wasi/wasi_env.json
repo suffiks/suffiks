@@ -1,0 +1,260 @@
+[
+  {
+    "name": "AddEnv",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddEnvFrom",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddLabel",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddAnnotation",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddInitContainer",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddSidecar",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "MergePatch",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "ValidationError",
+    "doc": "",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "GetOwner",
+    "doc": "",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetSpec",
+    "doc": "",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetOld",
+    "doc": "",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "CreateResource",
+    "doc": "",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "specPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "specSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "UpdateResource",
+    "doc": "",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "specPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "specSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "DeleteResource",
+    "doc": "",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "namePtr",
+        "type": "uint32"
+      },
+      {
+        "name": "nameSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetResource",
+    "doc": "getResource returns a resource from the Kubernetes API server.",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "namePtr",
+        "type": "uint32"
+      },
+      {
+        "name": "nameSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  }
+]

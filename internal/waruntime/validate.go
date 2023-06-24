@@ -9,6 +9,7 @@ import (
 
 type ValidationError struct {
 	Functions []funcDecl
+	Has       []funcDecl
 }
 
 func (e *ValidationError) Error() string {
@@ -16,6 +17,13 @@ func (e *ValidationError) Error() string {
 	sb.WriteString("missing or invalid functions:")
 	for _, f := range e.Functions {
 		sb.WriteString("\n\t" + f.String())
+	}
+
+	if len(e.Has) > 0 {
+		sb.WriteString("\nhas:")
+		for _, f := range e.Has {
+			sb.WriteString("\n\t" + f.String())
+		}
 	}
 
 	return sb.String()
@@ -56,19 +64,19 @@ var requiredFunctions = []funcDecl{
 	},
 	{
 		name:    "Defaulting",
-		returns: []api.ValueType{api.ValueTypeI32},
+		returns: []api.ValueType{api.ValueTypeI64},
 	},
 	{
 		name: "Validate",
 		args: []api.ValueType{api.ValueTypeI32},
 	},
 	{
-		name:    "Malloc",
+		name:    "malloc",
 		args:    []api.ValueType{api.ValueTypeI32},
 		returns: []api.ValueType{api.ValueTypeI32},
 	},
 	{
-		name: "Free",
+		name: "free",
 		args: []api.ValueType{api.ValueTypeI32},
 	},
 }
@@ -115,6 +123,14 @@ func validate(module wazero.CompiledModule) error {
 	}
 
 	if len(err.Functions) > 0 {
+		for name, f := range funcs {
+			err.Has = append(err.Has, funcDecl{
+				name:    name,
+				args:    f.ParamTypes(),
+				returns: f.ResultTypes(),
+			})
+		}
+
 		return err
 	}
 

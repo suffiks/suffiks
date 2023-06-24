@@ -168,6 +168,8 @@ gen-extensions:
 		--go_out=. \
 		--go-grpc_out=. \
 
+gen-wasi-env:
+	go run ./cmd/gen_wasi_env > ./extension/wasi/wasi_env.json
 
 ##@ Build Dependencies
 

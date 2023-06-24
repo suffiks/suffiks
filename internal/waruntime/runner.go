@@ -66,14 +66,9 @@ func (r *Runner) spanAttributes(span trace.Span) {
 	)
 }
 
-func (r *Runner) instance(ctx context.Context) (api.Module, error) {
-	ctx, span := tracing.Start(ctx, "WASI.Instance")
-	defer span.End()
-	r.spanAttributes(span)
-
-	mod := r.runtime.NewHostModuleBuilder("suffiks")
-
-	funcs := map[string]any{
+// env returns a map of functions that are exposed to the WASI module.
+func (r *Runner) env() map[string]any {
+	return map[string]any{
 		"AddEnv":           r.addEnv,
 		"AddEnvFrom":       r.addEnvFrom,
 		"AddLabel":         r.addLabel,
@@ -90,7 +85,16 @@ func (r *Runner) instance(ctx context.Context) (api.Module, error) {
 		"DeleteResource":   r.deleteResource,
 		"GetResource":      r.getResource,
 	}
-	for name, fn := range funcs {
+}
+
+func (r *Runner) instance(ctx context.Context) (api.Module, error) {
+	ctx, span := tracing.Start(ctx, "WASI.Instance")
+	defer span.End()
+	r.spanAttributes(span)
+
+	mod := r.runtime.NewHostModuleBuilder("suffiks")
+
+	for name, fn := range r.env() {
 		mod = mod.NewFunctionBuilder().WithFunc(fn).Export(name)
 	}
 
@@ -139,7 +143,8 @@ func (r *Runner) Validate(ctx context.Context, req *protogen.ValidationRequest) 
 	defer mod.Close(ctx)
 
 	r.validationRequest = req
-	_, err = mod.ExportedFunction("Validate").Call(ctx, uint64(req.Type))
+	typ := uint64(req.Type)
+	_, err = mod.ExportedFunction("Validate").Call(ctx, typ)
 
 	r.lock.Lock()
 	defer r.lock.Unlock()
@@ -163,17 +168,16 @@ func (r *Runner) Defaulting(ctx context.Context, req *protogen.SyncRequest) (*pr
 		return nil, err
 	}
 
-	ptrAndSize := uint32(ret[0])
+	ptrAndSize := uint64(ret[0])
 	if ptrAndSize == 0 {
 		return &protogen.DefaultResponse{}, nil
 	}
 
-	size := ptrAndSize & 0xFFFF
-	ptr := ptrAndSize >> 16
+	ptr := ptrAndSize >> 32
 
-	b, ok := mod.Memory().Read(uint32(ptr), uint32(size))
+	b, ok := mod.Memory().Read(uint32(ptr), uint32(ptrAndSize))
 	if !ok {
-		return nil, fmt.Errorf("failed to read memory at %d with size %d", ptr, size)
+		return nil, fmt.Errorf("failed to read memory at %d with size %d", ptr, uint32(ptrAndSize))
 	}
 
 	return &protogen.DefaultResponse{Spec: b}, nil
@@ -325,7 +329,7 @@ func (r *Runner) mergePatch(ctx context.Context, m api.Module, ptr, size uint32)
 	}
 }
 
-func (r *Runner) getOwner(ctx context.Context, m api.Module) uint32 {
+func (r *Runner) getOwner(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getOwner")
 
@@ -342,7 +346,7 @@ func (r *Runner) getOwner(ctx context.Context, m api.Module) uint32 {
 	return marshalProto(ctx, m, owner)
 }
 
-func (r *Runner) getSpec(ctx context.Context, m api.Module) uint32 {
+func (r *Runner) getSpec(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getSpec")
 
@@ -358,7 +362,7 @@ func (r *Runner) getSpec(ctx context.Context, m api.Module) uint32 {
 	return writeByteSlice(ctx, m, b)
 }
 
-func (r *Runner) getOld(ctx context.Context, m api.Module) uint32 {
+func (r *Runner) getOld(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getOld")
 
@@ -382,7 +386,8 @@ func (r *Runner) validationError(ctx context.Context, m api.Module, ptr, size ui
 	)
 }
 
-func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint32 {
+// getResource returns a resource from the Kubernetes API server.
+func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.GetResource")
 	defer span.End()
 	r.spanAttributes(span)
@@ -390,7 +395,7 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "get"); err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	nameb, ok := m.Memory().Read(namePtr, nameSize)
@@ -407,19 +412,19 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	}).Namespace(r.syncRequest.Owner.Namespace).Get(ctx, string(nameb), metav1.GetOptions{})
 	if err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	b, err := resource.MarshalJSON()
 	if err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	return writeByteSlice(ctx, m, b)
 }
 
-func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint32 {
+func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.DeleteResource")
 	defer span.End()
 	r.spanAttributes(span)
@@ -427,7 +432,7 @@ func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "delete"); err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	nameb, ok := m.Memory().Read(namePtr, nameSize)
@@ -444,12 +449,12 @@ func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	}).Namespace(r.syncRequest.Owner.Namespace).Delete(ctx, string(nameb), metav1.DeleteOptions{})
 	if err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 	return 0
 }
 
-func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint32 {
+func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.CreateResource")
 	defer span.End()
 	r.spanAttributes(span)
@@ -457,7 +462,7 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "create"); err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	b, ok := m.Memory().Read(specPtr, specSize)
@@ -479,7 +484,7 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	}).Namespace(r.syncRequest.Owner.Namespace).Create(ctx, resource, metav1.CreateOptions{})
 	if err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	b, err = n.MarshalJSON()
@@ -490,7 +495,7 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	return writeByteSlice(ctx, m, b)
 }
 
-func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint32 {
+func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.UpdateResource")
 	defer span.End()
 	r.spanAttributes(span)
@@ -498,7 +503,7 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	gvr := unmarshalClientGoProto(m, &metav1.GroupVersionResource{}, gvrPtr, gvrSize)
 	if err := r.isAllowed(ctx, gvr, "update"); err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	b, ok := m.Memory().Read(specPtr, specSize)
@@ -520,7 +525,7 @@ func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	}).Namespace(r.syncRequest.Owner.Namespace).Update(ctx, resource, metav1.UpdateOptions{})
 	if err != nil {
 		log.Println(err)
-		return uint32(toClientError(err))
+		return uint64(toClientError(err))
 	}
 
 	b, err = n.MarshalJSON()
@@ -576,7 +581,7 @@ func unmarshalClientGoProto[T golangproto.Message](m api.Module, v T, ptr, size 
 	return v
 }
 
-func marshalProto(ctx context.Context, m api.Module, v protoreflect.ProtoMessage) uint32 {
+func marshalProto(ctx context.Context, m api.Module, v protoreflect.ProtoMessage) uint64 {
 	b, err := proto.Marshal(v)
 	if err != nil {
 		panic("marshalProto: " + err.Error())
@@ -584,18 +589,20 @@ func marshalProto(ctx context.Context, m api.Module, v protoreflect.ProtoMessage
 	return writeByteSlice(ctx, m, b)
 }
 
-func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint32 {
-	res, err := m.ExportedFunction("Malloc").Call(ctx, uint64(len(b)))
+func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint64 {
+	res, err := m.ExportedFunction("malloc").Call(ctx, uint64(len(b)))
 	if err != nil {
 		panic("marshalProto: " + err.Error())
 	}
 
 	ptr := res[0]
+	fmt.Println("######### ptr: ", uint32(ptr), " len(b): ", uint32(len(b)))
+	fmt.Println("######### Verify: ", (uint32(ptr)<<16)>>16)
 	if ok := m.Memory().Write(uint32(ptr), b); !ok {
 		panic("marshalProto: unable to write to memory")
 	}
 
-	return uint32(ptr)<<16 | uint32(len(b))
+	return uint64(ptr)<<32 | uint64(len(b))
 }
 
 // func ptrSizeToString(mod api.Module, ptrSize uint32) (string, error) {

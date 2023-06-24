@@ -13,11 +13,13 @@ enum ValidationType {
 
 service Extension {
   rpc Sync(SyncRequest) returns (stream Response) {}
-  rpc Delete(SyncRequest) returns (stream Response) {}
+  rpc Delete(SyncRequest) returns (DeleteResponse) {}
   rpc Default(SyncRequest) returns (DefaultResponse) {}
   rpc Validate(ValidationRequest) returns (ValidationResponse) {}
   rpc Documentation(DocumentationRequest) returns (DocumentationResponse) {}
 }
+
+message DeleteResponse { string error = 1; }
 
 message ValidationRequest {
   ValidationType type = 1;

@@ -33,7 +33,7 @@ func (g *GRPC) Sync(ctx context.Context, in *protogen.SyncRequest) (StreamRespon
 	return g.client.Sync(ctx, in)
 }
 
-func (g *GRPC) Delete(ctx context.Context, in *protogen.SyncRequest) (StreamResponse, error) {
+func (g *GRPC) Delete(ctx context.Context, in *protogen.SyncRequest) (*protogen.DeleteResponse, error) {
 	return g.client.Delete(ctx, in)
 }
 

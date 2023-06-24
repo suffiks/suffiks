@@ -48,6 +48,7 @@ type Runner struct {
 	msgs             chan *protogen.Response
 	lock             sync.Mutex
 	validationErrors []*protogen.ValidationError
+	DeleteResponse   *protogen.DeleteResponse
 }
 
 func (r *Runner) Close(ctx context.Context) error {
@@ -235,20 +236,35 @@ func (r *Runner) Sync(ctx context.Context, req *protogen.SyncRequest) (Responder
 	return res, nil
 }
 
-func (r *Runner) Delete(ctx context.Context, req *protogen.SyncRequest) error {
+func (r *Runner) Delete(ctx context.Context, req *protogen.SyncRequest) (*protogen.DeleteResponse, error) {
 	ctx, span := tracing.Start(ctx, "WASI.Delete")
 	defer span.End()
 	r.spanAttributes(span)
 
 	mod, err := r.instance(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer mod.Close(ctx)
 
 	r.syncRequest = req
-	_, err = mod.ExportedFunction("Delete").Call(ctx)
-	return err
+	res, err := mod.ExportedFunction("Delete").Call(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ptrAndSize := uint64(res[0])
+	if ptrAndSize == 0 {
+		return &protogen.DeleteResponse{}, nil
+	}
+
+	b := readByteSlice(ctx, mod, ptrAndSize)
+
+	v := &protogen.DeleteResponse{}
+	if err := proto.Unmarshal(b, v); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal: %w", err)
+	}
+	return v, nil
 }
 
 func (r *Runner) addEnv(ctx context.Context, m api.Module, ptr, size uint32) {
@@ -586,6 +602,17 @@ func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint64 {
 	}
 
 	return uint64(ptr)<<32 | uint64(len(b))
+}
+
+func readByteSlice(ctx context.Context, m api.Module, ptrAndSize uint64) []byte {
+	ptr := uint32(ptrAndSize >> 32)
+	size := uint32(ptrAndSize)
+
+	b, ok := m.Memory().Read(ptr, size)
+	if !ok {
+		panic("failed to read memory")
+	}
+	return b
 }
 
 func isUpper(s string) bool {

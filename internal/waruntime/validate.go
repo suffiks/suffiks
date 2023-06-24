@@ -60,7 +60,8 @@ var requiredFunctions = []funcDecl{
 		name: "Sync",
 	},
 	{
-		name: "Delete",
+		name:    "Delete",
+		returns: []api.ValueType{api.ValueTypeI64},
 	},
 	{
 		name:    "Defaulting",

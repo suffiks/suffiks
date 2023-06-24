@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/suffiks/suffiks/extension"
+	"github.com/suffiks/suffiks/extension/protogen"
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,11 +116,13 @@ func (i *IngressExtension) Sync(ctx context.Context, owner extension.Owner, ingr
 	return nil
 }
 
-func (i *IngressExtension) Delete(ctx context.Context, owner extension.Owner, v *Ingresses) error {
+func (i *IngressExtension) Delete(ctx context.Context, owner extension.Owner, v *Ingresses) (protogen.DeleteResponse, error) {
 	err := i.Client.NetworkingV1().Ingresses(owner.Namespace()).Delete(ctx, owner.Name()+"-ing", metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
-		return err
+		return protogen.DeleteResponse{
+			Error: err.Error(),
+		}, err
 	}
 
-	return nil
+	return protogen.DeleteResponse{}, nil
 }

@@ -106,20 +106,20 @@ func (s *server[T]) Sync(req *protogen.SyncRequest, e protogen.Extension_SyncSer
 	return nil
 }
 
-func (s *server[T]) Delete(req *protogen.SyncRequest, e protogen.Extension_DeleteServer) error {
+func (s *server[T]) Delete(ctx context.Context, req *protogen.SyncRequest) (*protogen.DeleteResponse, error) {
 	var obj T
 	if len(req.GetSpec()) > 0 {
 		if err := json.Unmarshal(req.GetSpec(), &obj); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	err := s.ext.Delete(e.Context(), Owner{owner: req.GetOwner()}, obj)
+	resp, err := s.ext.Delete(ctx, Owner{owner: req.GetOwner()}, obj)
 	if err != nil {
 		log.Println("delete error:", err)
-		return err
+		return nil, err
 	}
-	return nil
+	return &resp, nil
 }
 
 func (s *server[T]) Default(ctx context.Context, req *protogen.SyncRequest) (*protogen.DefaultResponse, error) {

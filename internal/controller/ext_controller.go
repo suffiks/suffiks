@@ -100,25 +100,78 @@ func (c *ExtensionController) Sync(ctx context.Context, v Object) (*Result, erro
 }
 
 func (c *ExtensionController) Delete(ctx context.Context, v Object) error {
-	f := func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error) {
-		return ext.Delete(ctx, in)
-	}
-
-	_, err := c.run(ctx, "delete", v, f, func(e extension.Extension, cu *protogen.SyncRequest) bool {
+	_, err := c.delete(ctx, v, func(e extension.Extension, cu *protogen.SyncRequest) bool {
 		return e.Spec().Always || len(cu.Spec) > 0
 	})
 	return err
 }
 
 func (c *ExtensionController) DeleteExtension(ctx context.Context, v Object, extensionName string) error {
-	f := func(ctx context.Context, ext extension.Extension, in *protogen.SyncRequest) (responder, error) {
-		return ext.Delete(ctx, in)
-	}
-
-	_, err := c.run(ctx, "delete", v, f, func(e extension.Extension, cu *protogen.SyncRequest) bool {
+	_, err := c.delete(ctx, v, func(e extension.Extension, cu *protogen.SyncRequest) bool {
 		return e.Name() == extensionName
 	})
 	return err
+}
+
+func (c *ExtensionController) delete(ctx context.Context, obj Object, runFunc shouldRunFunc) ([]*protogen.DeleteResponse, error) {
+	ctx, span := tracing.Start(ctx, "extensions.Delete")
+	defer span.End()
+
+	var (
+		errs  MultiError
+		lock  sync.Mutex
+		wg    sync.WaitGroup
+		resps []*protogen.DeleteResponse
+
+		oldV extension.KeyValue
+	)
+
+	if err := json.Unmarshal(obj.GetSpec(), &oldV); err != nil {
+		return nil, err
+	}
+
+	exts := c.manager.ExtensionsFor(obj.GetObjectKind().GroupVersionKind().Kind)
+	for _, ext := range exts {
+		span.AddEvent("Delete " + ext.Name())
+		ext := ext
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			start := time.Now()
+			resp, err := c.runDelete(ctx, ext, obj, oldV, runFunc)
+			if err != nil {
+				c.metrics.WithLabelValues("delete", ext.Name(), "failure").Observe(time.Since(start).Seconds())
+				lock.Lock()
+				errs = append(errs, err)
+				lock.Unlock()
+				return
+			}
+			c.metrics.WithLabelValues("delete", ext.Name(), "success").Observe(time.Since(start).Seconds())
+
+			lock.Lock()
+			resps = append(resps, resp)
+			lock.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	if len(errs) > 0 {
+		return nil, errs
+	}
+
+	return resps, nil
+}
+
+func (c *ExtensionController) runDelete(ctx context.Context, ext extension.Extension, oldO Object, oldV extension.KeyValue, runFunc shouldRunFunc) (*protogen.DeleteResponse, error) {
+	ur, err := createOrUpdateRequest(oldO, oldV, ext)
+	if err != nil {
+		return nil, err
+	} else if !runFunc(ext, ur) {
+		return nil, nil
+	}
+
+	return ext.Delete(ctx, ur)
 }
 
 func (c *ExtensionController) Default(ctx context.Context, obj Object) ([]*protogen.DefaultResponse, error) {

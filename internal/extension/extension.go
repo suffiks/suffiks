@@ -20,6 +20,6 @@ type Extension interface {
 	Default(ctx context.Context, in *protogen.SyncRequest) (*protogen.DefaultResponse, error)
 	Validate(ctx context.Context, in *protogen.ValidationRequest) (*protogen.ValidationResponse, error)
 	Sync(ctx context.Context, in *protogen.SyncRequest) (StreamResponse, error)
-	Delete(ctx context.Context, in *protogen.SyncRequest) (StreamResponse, error)
+	Delete(ctx context.Context, in *protogen.SyncRequest) (*protogen.DeleteResponse, error)
 	Documentation(ctx context.Context) (*protogen.DocumentationResponse, error)
 }

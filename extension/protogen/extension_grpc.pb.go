@@ -19,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ExtensionClient interface {
 	Sync(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_SyncClient, error)
-	Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_DeleteClient, error)
+	Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Default(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DefaultResponse, error)
 	Validate(ctx context.Context, in *ValidationRequest, opts ...grpc.CallOption) (*ValidationResponse, error)
 	Documentation(ctx context.Context, in *DocumentationRequest, opts ...grpc.CallOption) (*DocumentationResponse, error)
@@ -65,36 +65,13 @@ func (x *extensionSyncClient) Recv() (*Response, error) {
 	return m, nil
 }
 
-func (c *extensionClient) Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Extension_DeleteClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Extension_ServiceDesc.Streams[1], "/extension.Extension/Delete", opts...)
+func (c *extensionClient) Delete(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/extension.Extension/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &extensionDeleteClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Extension_DeleteClient interface {
-	Recv() (*Response, error)
-	grpc.ClientStream
-}
-
-type extensionDeleteClient struct {
-	grpc.ClientStream
-}
-
-func (x *extensionDeleteClient) Recv() (*Response, error) {
-	m := new(Response)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 func (c *extensionClient) Default(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (*DefaultResponse, error) {
@@ -129,7 +106,7 @@ func (c *extensionClient) Documentation(ctx context.Context, in *DocumentationRe
 // for forward compatibility
 type ExtensionServer interface {
 	Sync(*SyncRequest, Extension_SyncServer) error
-	Delete(*SyncRequest, Extension_DeleteServer) error
+	Delete(context.Context, *SyncRequest) (*DeleteResponse, error)
 	Default(context.Context, *SyncRequest) (*DefaultResponse, error)
 	Validate(context.Context, *ValidationRequest) (*ValidationResponse, error)
 	Documentation(context.Context, *DocumentationRequest) (*DocumentationResponse, error)
@@ -143,8 +120,8 @@ type UnimplementedExtensionServer struct {
 func (UnimplementedExtensionServer) Sync(*SyncRequest, Extension_SyncServer) error {
 	return status.Errorf(codes.Unimplemented, "method Sync not implemented")
 }
-func (UnimplementedExtensionServer) Delete(*SyncRequest, Extension_DeleteServer) error {
-	return status.Errorf(codes.Unimplemented, "method Delete not implemented")
+func (UnimplementedExtensionServer) Delete(context.Context, *SyncRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedExtensionServer) Default(context.Context, *SyncRequest) (*DefaultResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Default not implemented")
@@ -189,25 +166,22 @@ func (x *extensionSyncServer) Send(m *Response) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Extension_Delete_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SyncRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
+func _Extension_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncRequest)
+	if err := dec(in); err != nil {
+		return nil, err
 	}
-	return srv.(ExtensionServer).Delete(m, &extensionDeleteServer{stream})
-}
-
-type Extension_DeleteServer interface {
-	Send(*Response) error
-	grpc.ServerStream
-}
-
-type extensionDeleteServer struct {
-	grpc.ServerStream
-}
-
-func (x *extensionDeleteServer) Send(m *Response) error {
-	return x.ServerStream.SendMsg(m)
+	if interceptor == nil {
+		return srv.(ExtensionServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/extension.Extension/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExtensionServer).Delete(ctx, req.(*SyncRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Extension_Default_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -272,6 +246,10 @@ var Extension_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ExtensionServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Delete",
+			Handler:    _Extension_Delete_Handler,
+		},
+		{
 			MethodName: "Default",
 			Handler:    _Extension_Default_Handler,
 		},
@@ -288,11 +266,6 @@ var Extension_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Sync",
 			Handler:       _Extension_Sync_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "Delete",
-			Handler:       _Extension_Delete_Handler,
 			ServerStreams: true,
 		},
 	},

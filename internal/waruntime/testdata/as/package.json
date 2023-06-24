@@ -25,6 +25,7 @@
     }
   },
   "dependencies": {
+    "@suffiks/suffiks-as": "^0.0.2-pre.8",
     "json-as": "^0.5.37"
   },
   "overrides": {

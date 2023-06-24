@@ -212,8 +212,8 @@ func (t test) sync(ctx context.Context, ctrl *controller.ExtensionController, cl
 			return false
 		}
 
-		if !cmp.Equal(lookupObj, &lookup, cmpopts.EquateEmpty()) {
-			printError(t.Name, "diff -want +got:\n%s", cmp.Diff(lookupObj, &lookup, cmpopts.EquateEmpty()))
+		if !cmp.Equal(&lookup, lookupObj, cmpopts.EquateEmpty()) {
+			printError(t.Name, "diff -want +got:\n%s", cmp.Diff(&lookup, lookupObj, cmpopts.EquateEmpty()))
 			return false
 		}
 	}

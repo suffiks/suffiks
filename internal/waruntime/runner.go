@@ -581,26 +581,12 @@ func writeByteSlice(ctx context.Context, m api.Module, b []byte) uint64 {
 	}
 
 	ptr := res[0]
-	fmt.Println("######### ptr: ", uint32(ptr), " len(b): ", uint32(len(b)))
-	fmt.Println("######### Verify: ", (uint32(ptr)<<16)>>16)
 	if ok := m.Memory().Write(uint32(ptr), b); !ok {
 		panic("marshalProto: unable to write to memory")
 	}
 
 	return uint64(ptr)<<32 | uint64(len(b))
 }
-
-// func ptrSizeToString(mod api.Module, ptrSize uint32) (string, error) {
-// 	size := ptrSize & 0xFFFF
-// 	ptr := ptrSize >> 16
-
-// 	b, ok := mod.Memory().Read(uint32(ptr), uint32(size))
-// 	if !ok {
-// 		return "", fmt.Errorf("failed to read memory at %d with size %d", ptr, size)
-// 	}
-
-// 	return string(b), nil
-// }
 
 func isUpper(s string) bool {
 	for _, r := range s {

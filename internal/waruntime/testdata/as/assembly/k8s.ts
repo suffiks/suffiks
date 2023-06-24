@@ -42,6 +42,7 @@ class HTTPIngressRuleValue {
 class HTTPIngressPath {
   path!: string;
   backend!: IngressBackend;
+  pathType!: string;
 }
 
 @json
@@ -69,14 +70,14 @@ class Ingress {
 }
 
 export {
-  Ingress,
-  IngressSpec,
-  IngressRule,
-  HTTPIngressRuleValue,
   HTTPIngressPath,
+  HTTPIngressRuleValue,
+  Ingress,
   IngressBackend,
+  IngressRule,
   IngressServiceBackend,
-  ServiceBackendPort,
+  IngressSpec,
   ObjectReference,
   Owner,
+  ServiceBackendPort,
 };

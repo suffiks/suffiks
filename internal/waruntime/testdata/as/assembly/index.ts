@@ -1,7 +1,7 @@
 // The entry file of your WebAssembly module.
 
+import { Suffiks, ValidationType } from "@suffiks/suffiks-as/assembly/index";
 import { JSON } from "json-as";
-import { Suffiks } from "suffiks-as/assembly/index";
 import {
   HTTPIngressPath,
   HTTPIngressRuleValue,
@@ -13,6 +13,7 @@ import {
   ObjectReference,
   ServiceBackendPort,
 } from "./k8s";
+export * from "@suffiks/suffiks-as/assembly/suffiks/memory";
 
 const ingressClass = "nginx";
 
@@ -48,14 +49,18 @@ class SpecWrapper {
 }
 
 export function Validate(vt: i32): void {
+  if (Suffiks.validationType(vt) == ValidationType.DELETE) {
+    return;
+  }
+
   const ext = Suffiks.getSpec<Extension>();
 
   ext.ingresses.forEach((ingress, i) => {
     number = i;
-    if (!ingress.host.includes(".")) {
+    if (!validateHost(ingress.host)) {
       Suffiks.validationError(
         "ingresses[" + i.toString() + "].host",
-        "must contain a dot",
+        "is either invalid or not accepted",
         ingress.host
       );
     }
@@ -74,7 +79,7 @@ export function Validate(vt: i32): void {
   });
 }
 
-export function Defaulting(): u32 {
+export function Defaulting(): u64 {
   const ext = Suffiks.getSpec<Extension>();
 
   ext.ingresses.forEach((ingress, i) => {
@@ -126,6 +131,7 @@ export function Sync(): void {
     rule.http.paths = ingress.getPaths().map<HTTPIngressPath>((path) => {
       const p = new HTTPIngressPath();
       p.path = path;
+      p.pathType = "Prefix";
 
       p.backend = new IngressBackend();
       p.backend.service = new IngressServiceBackend();
@@ -137,6 +143,33 @@ export function Sync(): void {
 
     return rule;
   });
+
+  const i = Suffiks.getResource<K8sIngress>(
+    "networking.k8s.io",
+    "v1",
+    "ingresses",
+    name
+  );
+  if (!i.error) {
+    spec.metadata.resourceVersion = i.resource!.metadata.resourceVersion;
+    const update = Suffiks.updateResource<K8sIngress>(
+      "networking.k8s.io",
+      "v1",
+      "ingresses",
+      JSON.stringify(spec)
+    );
+
+    if (update.error) {
+      console.error("Error updating ingress: " + update.error!.toString());
+      return;
+    }
+    return;
+  }
+
+  if (i.error && !i.error!.isNotFound()) {
+    console.error("Error getting ingress: " + i.error!.toString());
+    return;
+  }
 
   const res = Suffiks.createResource<K8sIngress>(
     "networking.k8s.io",
@@ -152,35 +185,59 @@ export function Sync(): void {
     console.log("Created ingress: " + res.resource!.metadata.name);
     return;
   }
-
-  console.log("Ingress already exists");
-  const i = Suffiks.getResource<K8sIngress>(
-    "networking.k8s.io",
-    "v1",
-    "ingresses",
-    name
-  );
-  if (i.error) {
-    console.error("Error getting ingress: " + i.error!.toString());
-    return;
-  }
-
-  spec.metadata.resourceVersion = i.resource!.metadata.resourceVersion;
-  const update = Suffiks.updateResource<K8sIngress>(
-    "networking.k8s.io",
-    "v1",
-    "ingresses",
-    JSON.stringify(spec)
-  );
-
-  if (update.error) {
-    console.error("Error updating ingress: " + update.error!.toString());
-    return;
-  }
 }
 
 export function Delete(): void {
   const owner = Suffiks.getOwner();
+
+  const err = Suffiks.deleteResource(
+    "networking.k8s.io",
+    "v1",
+    "ingresses",
+    owner.name
+  );
+
+  if (err) {
+    console.error("Error deleting ingress: " + err.toString());
+    return;
+  }
 }
 
-export * from "suffiks-as/assembly/suffiks/memory";
+function validateHost(host: string): boolean {
+  if (!process.env.has("INGRESSES")) {
+    console.log("NO CONFIGURATION FOUND");
+    return true;
+  }
+
+  const hostsList = process.env.get("INGRESSES");
+  if (!hostsList) {
+    return true;
+  }
+
+  const hosts = hostsList.split(",");
+
+  const validateHost = (valid: string, incoming: string): boolean => {
+    const vp = valid.split(".");
+    const ip = incoming.split(".");
+
+    if (vp.length != ip.length) {
+      return false;
+    }
+
+    for (let i = 0; i < vp.length; i++) {
+      if (vp[i] != "*" && vp[i] != ip[i]) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
+  for (let i = 0; i < hosts.length; i++) {
+    if (validateHost(hosts[i], host)) {
+      return true;
+    }
+  }
+
+  return false;
+}

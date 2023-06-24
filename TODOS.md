@@ -6,6 +6,7 @@
 - [ ] Support for reloading WASI extensions when the version changes.
 - [ ] Use `log/slog` for logging.
 - [ ] Support for returning errors from WASI.
+- [ ] Better output for `extgen wasi test`
 
 Probably not:
 

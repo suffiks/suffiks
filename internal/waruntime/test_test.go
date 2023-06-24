@@ -69,11 +69,6 @@ func TestRun(t *testing.T) {
 
 	expected := []*protogen.ValidationError{
 		{
-			Path:   "ingresses[0].host",
-			Detail: "must contain a dot",
-			Value:  "suffiks",
-		},
-		{
 			Path:   "ingresses[1].paths[0]",
 			Detail: "must start with a slash",
 			Value:  "test",
@@ -169,8 +164,8 @@ func TestRun(t *testing.T) {
 	}
 
 	actions := client.Actions()
-	if len(actions) != 1 {
-		t.Fatalf("expected 1 action, got %d", len(actions))
+	if len(actions) != 2 {
+		t.Fatalf("expected 2 action, got %d", len(actions))
 	}
 
 	// SYNC AGAIN

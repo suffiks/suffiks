@@ -1,7 +1,7 @@
 [
   {
     "name": "AddEnv",
-    "doc": "",
+    "doc": "addEnv adds an environment variable to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
     "args": [
       {
         "name": "ptr",
@@ -16,7 +16,7 @@
   },
   {
     "name": "AddEnvFrom",
-    "doc": "",
+    "doc": "addEnvFrom adds an environment variable from a secret or configmap to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nEnvFrom proto.",
     "args": [
       {
         "name": "ptr",
@@ -31,7 +31,7 @@
   },
   {
     "name": "AddLabel",
-    "doc": "",
+    "doc": "addLabel adds a label to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
     "args": [
       {
         "name": "ptr",
@@ -46,7 +46,7 @@
   },
   {
     "name": "AddAnnotation",
-    "doc": "",
+    "doc": "addAnnotation adds an annotation to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
     "args": [
       {
         "name": "ptr",
@@ -61,7 +61,7 @@
   },
   {
     "name": "AddInitContainer",
-    "doc": "",
+    "doc": "addInitContainer adds an init container to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nContainer proto.",
     "args": [
       {
         "name": "ptr",
@@ -76,7 +76,7 @@
   },
   {
     "name": "AddSidecar",
-    "doc": "",
+    "doc": "addSidecar adds a sidecar to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nContainer proto.",
     "args": [
       {
         "name": "ptr",
@@ -91,7 +91,7 @@
   },
   {
     "name": "MergePatch",
-    "doc": "",
+    "doc": "mergePatch applies a merge patch to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nMergePatch JSON.",
     "args": [
       {
         "name": "ptr",
@@ -106,7 +106,7 @@
   },
   {
     "name": "ValidationError",
-    "doc": "",
+    "doc": "validationError adds a validation error during a validation request.\n\n`ptr` and `size` are the pointer and size of the serialized\nValidationError proto.",
     "args": [
       {
         "name": "ptr",
@@ -121,7 +121,7 @@
   },
   {
     "name": "GetOwner",
-    "doc": "",
+    "doc": "getOwner returns the OwnerReference proto of the workload.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
     "args": [],
     "return": [
       {
@@ -131,7 +131,7 @@
   },
   {
     "name": "GetSpec",
-    "doc": "",
+    "doc": "getSpec returns the Spec JSON of the workload.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
     "args": [],
     "return": [
       {
@@ -141,7 +141,7 @@
   },
   {
     "name": "GetOld",
-    "doc": "",
+    "doc": "getOld returns the Old JSON of the workload.\n\nThis is only valid for validation requests.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
     "args": [],
     "return": [
       {
@@ -151,7 +151,7 @@
   },
   {
     "name": "CreateResource",
-    "doc": "",
+    "doc": "createResource creates a resource in the Kubernetes API server.\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
     "args": [
       {
         "name": "gvrPtr",
@@ -178,7 +178,7 @@
   },
   {
     "name": "UpdateResource",
-    "doc": "",
+    "doc": "updateResource updates a resource in the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
     "args": [
       {
         "name": "gvrPtr",
@@ -205,7 +205,7 @@
   },
   {
     "name": "DeleteResource",
-    "doc": "",
+    "doc": "deleteResource deletes a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
     "args": [
       {
         "name": "gvrPtr",
@@ -232,7 +232,7 @@
   },
   {
     "name": "GetResource",
-    "doc": "getResource returns a resource from the Kubernetes API server.",
+    "doc": "getResource returns a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
     "args": [
       {
         "name": "gvrPtr",

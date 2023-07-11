@@ -267,6 +267,10 @@ func (r *Runner) Delete(ctx context.Context, req *protogen.SyncRequest) (*protog
 	return v, nil
 }
 
+// addEnv adds an environment variable to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// KeyValue proto.
 func (r *Runner) addEnv(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addEnv")
@@ -277,6 +281,10 @@ func (r *Runner) addEnv(ctx context.Context, m api.Module, ptr, size uint32) {
 	}
 }
 
+// addEnvFrom adds an environment variable from a secret or configmap to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// EnvFrom proto.
 func (r *Runner) addEnvFrom(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addEnvFrom")
@@ -287,6 +295,10 @@ func (r *Runner) addEnvFrom(ctx context.Context, m api.Module, ptr, size uint32)
 	}
 }
 
+// addLabel adds a label to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// KeyValue proto.
 func (r *Runner) addLabel(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addLabel")
@@ -297,6 +309,10 @@ func (r *Runner) addLabel(ctx context.Context, m api.Module, ptr, size uint32) {
 	}
 }
 
+// addAnnotation adds an annotation to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// KeyValue proto.
 func (r *Runner) addAnnotation(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addAnnotation")
@@ -307,6 +323,10 @@ func (r *Runner) addAnnotation(ctx context.Context, m api.Module, ptr, size uint
 	}
 }
 
+// addInitContainer adds an init container to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// Container proto.
 func (r *Runner) addInitContainer(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addInitContainer")
@@ -317,6 +337,10 @@ func (r *Runner) addInitContainer(ctx context.Context, m api.Module, ptr, size u
 	}
 }
 
+// addSidecar adds a sidecar to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// Container proto.
 func (r *Runner) addSidecar(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addSidecar")
@@ -327,6 +351,10 @@ func (r *Runner) addSidecar(ctx context.Context, m api.Module, ptr, size uint32)
 	}
 }
 
+// mergePatch applies a merge patch to the workload.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// MergePatch JSON.
 func (r *Runner) mergePatch(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("addMergePatch")
@@ -342,6 +370,10 @@ func (r *Runner) mergePatch(ctx context.Context, m api.Module, ptr, size uint32)
 	}
 }
 
+// getOwner returns the OwnerReference proto of the workload.
+//
+// The returned value is a uint64 which uses the first 32 bits to
+// store the pointer, and the last 32 bits to store the size.
 func (r *Runner) getOwner(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getOwner")
@@ -359,6 +391,10 @@ func (r *Runner) getOwner(ctx context.Context, m api.Module) uint64 {
 	return marshalProto(ctx, m, owner)
 }
 
+// getSpec returns the Spec JSON of the workload.
+//
+// The returned value is a uint64 which uses the first 32 bits to
+// store the pointer, and the last 32 bits to store the size.
 func (r *Runner) getSpec(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getSpec")
@@ -375,6 +411,12 @@ func (r *Runner) getSpec(ctx context.Context, m api.Module) uint64 {
 	return writeByteSlice(ctx, m, b)
 }
 
+// getOld returns the Old JSON of the workload.
+//
+// This is only valid for validation requests.
+//
+// The returned value is a uint64 which uses the first 32 bits to
+// store the pointer, and the last 32 bits to store the size.
 func (r *Runner) getOld(ctx context.Context, m api.Module) uint64 {
 	span := tracing.Get(ctx)
 	span.AddEvent("getOld")
@@ -386,6 +428,10 @@ func (r *Runner) getOld(ctx context.Context, m api.Module) uint64 {
 	return writeByteSlice(ctx, m, r.validationRequest.Old.Spec)
 }
 
+// validationError adds a validation error during a validation request.
+//
+// `ptr` and `size` are the pointer and size of the serialized
+// ValidationError proto.
 func (r *Runner) validationError(ctx context.Context, m api.Module, ptr, size uint32) {
 	span := tracing.Get(ctx)
 	span.AddEvent("validationError")
@@ -400,6 +446,12 @@ func (r *Runner) validationError(ctx context.Context, m api.Module, ptr, size ui
 }
 
 // getResource returns a resource from the Kubernetes API server.
+//
+// `gvrPtr` and `gvrSize` are the pointer and size of the serialized
+// GroupVersionResource proto.
+//
+// `namePtr` and `nameSize` are the pointer and size of the serialized
+// string name of the resource.
 func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.GetResource")
 	defer span.End()
@@ -437,6 +489,13 @@ func (r *Runner) getResource(ctx context.Context, m api.Module, gvrPtr, gvrSize,
 	return writeByteSlice(ctx, m, b)
 }
 
+// deleteResource deletes a resource from the Kubernetes API server.
+//
+// `gvrPtr` and `gvrSize` are the pointer and size of the serialized
+// GroupVersionResource proto.
+//
+// `namePtr` and `nameSize` are the pointer and size of the serialized
+// string name of the resource.
 func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, namePtr, nameSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.DeleteResource")
 	defer span.End()
@@ -467,6 +526,13 @@ func (r *Runner) deleteResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	return 0
 }
 
+// createResource creates a resource in the Kubernetes API server.
+//
+// `gvrPtr` and `gvrSize` are the pointer and size of the serialized
+// GroupVersionResource proto.
+//
+// `specPtr` and `specSize` are the pointer and size of the serialized
+// Resource json.
 func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.CreateResource")
 	defer span.End()
@@ -508,6 +574,13 @@ func (r *Runner) createResource(ctx context.Context, m api.Module, gvrPtr, gvrSi
 	return writeByteSlice(ctx, m, b)
 }
 
+// updateResource updates a resource in the Kubernetes API server.
+//
+// `gvrPtr` and `gvrSize` are the pointer and size of the serialized
+// GroupVersionResource proto.
+//
+// `specPtr` and `specSize` are the pointer and size of the serialized
+// Resource json.
 func (r *Runner) updateResource(ctx context.Context, m api.Module, gvrPtr, gvrSize, specPtr, specSize uint32) uint64 {
 	ctx, span := tracing.Start(ctx, "WASI.UpdateResource")
 	defer span.End()

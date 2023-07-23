@@ -187,7 +187,7 @@ export function Sync(): void {
   }
 }
 
-export function Delete(): void {
+export function Delete(): u64 {
   const owner = Suffiks.getOwner();
 
   const err = Suffiks.deleteResource(
@@ -198,9 +198,10 @@ export function Delete(): void {
   );
 
   if (err) {
-    console.error("Error deleting ingress: " + err.toString());
-    return;
+    return Suffiks.deleteResponse("Error deleting ingress: " + err.toString());
   }
+
+  return 0;
 }
 
 function validateHost(host: string): boolean {

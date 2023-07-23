@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Install asdf
-        uses: asdf-vm/actions/setup@v1
+        uses: asdf-vm/actions/setup@v2
 
       - name: asdf cache
         id: asdf-cache
@@ -39,7 +39,9 @@ jobs:
       - name: Find go cache dir
         id: go-cache
         run: |
+          # Clear cache dirs to avoid error when restoring
           go clean -cache
+          rm -rf $(go env GOMODCACHE)
           echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
           echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
 

@@ -40,8 +40,7 @@ jobs:
         id: go-cache
         run: |
           # Clear cache dirs to avoid error when restoring
-          go clean -cache
-          rm -rf $(go env GOMODCACHE)
+          go clean -cache -modcache
           echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
           echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
 

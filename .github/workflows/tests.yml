@@ -17,7 +17,18 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install asdf & tools
+      - name: Install asdf
+        uses: asdf-vm/actions/setup@v1
+
+      - name: asdf cache
+        id: asdf-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.asdf/
+          key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
+
+      - name: Install CD tools from .tool-versions
+        if: steps.asdf-cache.outputs.cache-hit != 'true'
         uses: asdf-vm/actions/install@v2
         with:
           # Go is a dependency on two of the tools, so we install it first.

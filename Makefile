@@ -62,8 +62,7 @@ vulncheck: ## Run gosec against code.
 	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+test: manifests generate fmt vet envtest test-ci ## Run tests.
 
 .PHONY: test-ci
 test-ci: envtest ## Run tests without generating code or checking for fmt/vet.

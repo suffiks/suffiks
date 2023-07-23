@@ -151,7 +151,7 @@
   },
   {
     "name": "CreateResource",
-    "doc": "createResource creates a resource in the Kubernetes API server.\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
+    "doc": "createResource creates a resource in the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
     "args": [
       {
         "name": "gvrPtr",
@@ -205,7 +205,7 @@
   },
   {
     "name": "DeleteResource",
-    "doc": "deleteResource deletes a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
+    "doc": "deleteResource deletes a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
     "args": [
       {
         "name": "gvrPtr",
@@ -232,7 +232,7 @@
   },
   {
     "name": "GetResource",
-    "doc": "getResource returns a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
+    "doc": "getResource returns a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
     "args": [
       {
         "name": "gvrPtr",

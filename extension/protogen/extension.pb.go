@@ -664,6 +664,7 @@ type Response struct {
 	unknownFields protoimpl.UnknownFields
 
 	// Types that are assignable to OFResponse:
+	//
 	//	*Response_Env
 	//	*Response_Label
 	//	*Response_Annotation

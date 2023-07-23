@@ -19,6 +19,11 @@ jobs:
 
       - name: Install asdf & tools
         uses: asdf-vm/actions/install@v2
+        with:
+          # Go is a dependency on two of the tools, so we install it first.
+          before_install: |
+            asdf install golang latest
+            asdf global golang latest
 
       - name: Find go cache dir
         id: go-cache

@@ -28,6 +28,7 @@ jobs:
       - name: Find go cache dir
         id: go-cache
         run: |
+          go clean -cache
           echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
           echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
 
@@ -37,13 +38,15 @@ jobs:
           path: |
             ${{ steps.go-cache.outputs.gocache }}
             ${{ steps.go-cache.outputs.gomodcache }}
-          key: go-${{ hashFiles('go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
       - name: Tests
         run: make test
 
       - name: Check generated code
         run: |
+          # make generate and make manifests are run in the test step, so we only
+          # need to run the other two here.
           make client
           make gen-extensions
           make gen-wasi-env

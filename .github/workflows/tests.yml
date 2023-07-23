@@ -20,6 +20,20 @@ jobs:
       - name: Install asdf & tools
         uses: asdf-vm/actions/install@v2
 
+      - name: Find go cache dir
+        id: go-cache
+        run: |
+          echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Cache go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ steps.go-cache.outputs.gocache }}
+            ${{ steps.go-cache.outputs.gomodcache }}
+          key: go-${{ hashFiles('go.sum') }}
+
       - name: Tests
         run: make test
 
@@ -39,7 +53,6 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: 1.20.6
-          cache: false
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
@@ -50,10 +63,6 @@ jobs:
           only-new-issues: true
 
           # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
-          # skip-pkg-cache: true
+          skip-pkg-cache: true
 
-          # Optional: if set to true, then the action won't cache or restore ~/.cache/go-build.
-          # skip-build-cache: true
-
-          # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
-          # install-mode: "goinstall"
+          args: --timeout=30m

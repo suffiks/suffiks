@@ -12,13 +12,14 @@
       "textFile": "build/release.wat",
       "sourceMap": true,
       "optimizeLevel": 3,
-      "shrinkLevel": 0,
+      "shrinkLevel": 2,
       "converge": false,
-      "noAssert": false
+      "noAssert": true,
+      "runtime": "stub"
     }
   },
   "options": {
-    "bindings": "esm",
+    "bindings": "raw",
     "transform": [
       "json-as/transform"
     ]

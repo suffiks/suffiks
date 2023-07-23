@@ -21,7 +21,7 @@ func TestRun(t *testing.T) {
 	r := waruntime.New(ctx)
 	defer r.Close(ctx)
 
-	b, err := os.ReadFile("./testdata/as/build/debug.wasm")
+	b, err := os.ReadFile("./testdata/as/build/release.wasm")
 	if err != nil {
 		t.Fatal(err)
 	}

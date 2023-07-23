@@ -65,6 +65,10 @@ vulncheck: ## Run gosec against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
 
+.PHONY: test-ci
+test-ci: envtest ## Run tests without generating code or checking for fmt/vet.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
 .PHONY: client
 client: ## Generate client code.
 	rm -rf pkg/client

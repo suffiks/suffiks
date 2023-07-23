@@ -6,10 +6,8 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-  # Let golangci-lint comment on PRs
-  pull-requests: read
+env:
+  GOVERSION: 1.20.6
 
 jobs:
   build:
@@ -17,6 +15,44 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - name: Tests
+        run: make test
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Let golangci-lint comment on PRs
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GOVERSION }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.53
+
+          # Optional: show only new issues if it's a pull request. The default value is `false`.
+          only-new-issues: true
+
+          # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
+          skip-pkg-cache: true
+
+          args: --timeout=30m
+
+  generated-code:
+    runs-on: ubuntu-latest
+    steps:
       - name: Install asdf
         uses: asdf-vm/actions/setup@v2
 
@@ -52,37 +88,11 @@ jobs:
             ${{ steps.go-cache.outputs.gomodcache }}
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 
-      - name: Tests
-        run: make test
-
       - name: Check generated code
         run: |
-          # make generate and make manifests are run in the test step, so we only
-          # need to run the other two here.
+          make generate
+          make manifests
           make client
           make gen-extensions
           make gen-wasi-env
           git diff --exit-code --name-only
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.20.6
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.53
-
-          # Optional: show only new issues if it's a pull request. The default value is `false`.
-          only-new-issues: true
-
-          # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
-          skip-pkg-cache: true
-
-          args: --timeout=30m

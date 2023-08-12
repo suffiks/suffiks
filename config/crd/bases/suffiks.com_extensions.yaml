@@ -3,8 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.10.0
-  creationTimestamp: null
+    controller-gen.kubebuilder.io/version: v0.12.0
   name: extensions.suffiks.com
 spec:
   group: suffiks.com
@@ -55,16 +54,67 @@ spec:
                 type: boolean
               controller:
                 properties:
-                  namespace:
-                    type: string
-                  port:
-                    type: integer
-                  service:
-                    type: string
-                required:
-                - namespace
-                - port
-                - service
+                  grpc:
+                    properties:
+                      namespace:
+                        type: string
+                      port:
+                        type: integer
+                      service:
+                        type: string
+                    required:
+                    - namespace
+                    - port
+                    - service
+                    type: object
+                  wasi:
+                    properties:
+                      configMap:
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
+                      image:
+                        type: string
+                      resources:
+                        items:
+                          properties:
+                            group:
+                              pattern: ^[a-z]([-a-z0-9\.]*[a-z0-9])?$
+                              type: string
+                            methods:
+                              items:
+                                enum:
+                                - get
+                                - create
+                                - update
+                                - delete
+                                type: string
+                              type: array
+                            resource:
+                              pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            version:
+                              pattern: ^[a-z]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                          required:
+                          - group
+                          - methods
+                          - resource
+                          - version
+                          type: object
+                        type: array
+                      tag:
+                        type: string
+                    required:
+                    - image
+                    - tag
+                    type: object
                 type: object
               openAPIV3Schema:
                 type: object

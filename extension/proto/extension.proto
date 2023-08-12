@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-import "k8s.io/api/core/v1/generated.proto";
+import "k8s.proto";
 
-option go_package = "extension/protogen;protogen";
+option go_package = "github.com/suffiks/suffiks/extension/protogen";
 package extension;
 
 enum ValidationType {
@@ -13,11 +13,13 @@ enum ValidationType {
 
 service Extension {
   rpc Sync(SyncRequest) returns (stream Response) {}
-  rpc Delete(SyncRequest) returns (stream Response) {}
+  rpc Delete(SyncRequest) returns (DeleteResponse) {}
   rpc Default(SyncRequest) returns (DefaultResponse) {}
   rpc Validate(ValidationRequest) returns (ValidationResponse) {}
   rpc Documentation(DocumentationRequest) returns (DocumentationResponse) {}
 }
+
+message DeleteResponse { string error = 1; }
 
 message ValidationRequest {
   ValidationType type = 1;
@@ -72,8 +74,8 @@ message Response {
     KeyValue label = 2;
     KeyValue annotation = 3;
     EnvFrom envFrom = 4;
-    k8s.io.api.core.v1.Container initContainer = 6;
-    k8s.io.api.core.v1.Container container = 7;
+    Container initContainer = 6;
+    Container container = 7;
     bytes mergePatch = 5;
   }
 }

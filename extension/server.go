@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/suffiks/suffiks/base/tracing"
 	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/tracing"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
@@ -48,7 +48,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
 		)
 
-		if err := tracing.Provider(ctx, logr.Discard(), config.getTracing()); err != nil {
+		if err := tracing.Provider(ctx, logr.Discard() /*, config.getTracing()*/); err != nil {
 			return err
 		}
 	}
@@ -56,7 +56,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 
 	var pages [][]byte
 	if doc != nil {
-		fs.WalkDir(doc.FS, doc.Root, func(path string, d fs.DirEntry, err error) error {
+		err := fs.WalkDir(doc.FS, doc.Root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".md") {
 				return err
 			}
@@ -69,6 +69,9 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 			pages = append(pages, page)
 			return nil
 		})
+		if err != nil {
+			return err
+		}
 	}
 
 	protogen.RegisterExtensionServer(s, NewServer(ext, pages))
@@ -103,20 +106,20 @@ func (s *server[T]) Sync(req *protogen.SyncRequest, e protogen.Extension_SyncSer
 	return nil
 }
 
-func (s *server[T]) Delete(req *protogen.SyncRequest, e protogen.Extension_DeleteServer) error {
+func (s *server[T]) Delete(ctx context.Context, req *protogen.SyncRequest) (*protogen.DeleteResponse, error) {
 	var obj T
 	if len(req.GetSpec()) > 0 {
 		if err := json.Unmarshal(req.GetSpec(), &obj); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	err := s.ext.Delete(e.Context(), Owner{owner: req.GetOwner()}, obj)
+	resp, err := s.ext.Delete(ctx, Owner{owner: req.GetOwner()}, obj)
 	if err != nil {
 		log.Println("delete error:", err)
-		return err
+		return nil, err
 	}
-	return nil
+	return &resp, nil
 }
 
 func (s *server[T]) Default(ctx context.Context, req *protogen.SyncRequest) (*protogen.DefaultResponse, error) {

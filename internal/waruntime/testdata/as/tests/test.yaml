@@ -1,0 +1,65 @@
+app: &app
+  apiVersion: suffiks.com/v1
+  kind: Application
+  metadata: &metadata
+    name: testapp
+    namespace: testns
+  spec:
+    ingresses:
+      - host: testapp.suffiks.com
+        paths: ["/"]
+
+tests:
+  - name: Validate
+    validate:
+      type: update
+      invalid: false
+      resource: *app
+
+  - name: Defaulting
+    defaulting:
+      resource:
+        <<: *app
+        spec:
+          ingresses:
+            - host: testapp2.suffiks.com
+      expected:
+        <<: *app
+        spec:
+          ingresses:
+            - host: testapp2.suffiks.com
+              paths: ["/"]
+  - name: Sync
+    sync:
+      resource: *app
+      expected:
+        <<: *app
+        metadata:
+          <<: *metadata
+          labels:
+            is-wasm-controlled: "true"
+      lookup:
+        - kind: Ingress
+          apiVersion: networking.k8s.io/v1
+          metadata:
+            name: testapp
+            namespace: testns
+            resourceVersion: null
+            ownerReferences:
+              - apiVersion: suffiks.com/v1
+                kind: Application
+                name: testapp
+                uid: ""
+                controller: true
+          spec:
+            ingressClassName: nginx
+            rules:
+              - host: testapp.suffiks.com
+                http:
+                  paths:
+                    - path: /
+                      backend:
+                        service:
+                          name: testapp
+                          port:
+                            name: http

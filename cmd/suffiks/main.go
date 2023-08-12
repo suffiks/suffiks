@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -15,22 +15,24 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/suffiks/suffiks"
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
-	"github.com/suffiks/suffiks/base/tracing"
-	"github.com/suffiks/suffiks/controllers"
-	"github.com/suffiks/suffiks/docparser"
-	"github.com/suffiks/suffiks/extension/protogen"
+	"github.com/suffiks/suffiks/internal/controller"
+	"github.com/suffiks/suffiks/internal/docparser"
+	"github.com/suffiks/suffiks/internal/extension"
+	"github.com/suffiks/suffiks/internal/tracing"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	uzap "go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/dynamic"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -47,8 +49,18 @@ func init() {
 }
 
 func main() {
-	var configFile string
-	flag.StringVar(&configFile, "config-file", "", "Path to the configuration file.")
+	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, os.Kill)
+	defer stop()
+
+	var metricsAddr string
+	var enableLeaderElection bool
+	var probeAddr string
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
 
 	opts := zap.Options{
 		Development: true,
@@ -78,15 +90,24 @@ func main() {
 	setupLog := ctrl.Log.WithName("setup")
 
 	var err error
-	ctrlConfig := suffiksv1.ProjectConfig{}
-	options := ctrl.Options{Scheme: scheme}
-	if configFile != "" {
-		options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
-		if err != nil {
-			setupLog.Error(err, "unable to load the config file")
-			os.Exit(1)
-		}
+	// TODO: Re-introduce config file support
+	// ctrlConfig := suffiksv1.ProjectConfig{}
+	options := ctrl.Options{
+		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
+		Port:                   9443,
+		HealthProbeBindAddress: probeAddr,
+		LeaderElection:         enableLeaderElection,
+		LeaderElectionID:       "operator.suffiks.com",
+		NewCache:               cache.New,
 	}
+	// if configFile != "" {
+	// 	options, err = options.AndFrom(ctrl.ConfigFile().AtPath(configFile).OfKind(&ctrlConfig))
+	// 	if err != nil {
+	// 		setupLog.Error(err, "unable to load the config file")
+	// 		os.Exit(1)
+	// 	}
+	// }
 
 	cfg := ctrl.GetConfigOrDie()
 	cfg.WrapTransport = func(rt http.RoundTripper) http.RoundTripper {
@@ -102,25 +123,31 @@ func main() {
 	}
 
 	grpcOptions := []grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	}
 
-	crdMgr, err := base.NewExtensionManager(suffiks.CRDFiles, grpcOptions)
+	dynClient, err := dynamic.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create dynamic client")
+		os.Exit(1)
+	}
+
+	crdMgr, err := extension.NewExtensionManager(ctx, suffiks.CRDFiles, dynClient, extension.WithGRPCOptions(grpcOptions...))
 	if err != nil {
 		setupLog.Error(err, "unable to create CRD manager")
 		os.Exit(1)
 	}
 
-	extController := base.NewExtensionController(crdMgr)
+	extController := controller.NewExtensionController(crdMgr)
 
 	if err := extController.RegisterMetrics(metrics.Registry); err != nil {
 		setupLog.Error(err, "unable to register CRD metrics")
 		os.Exit(1)
 	}
 
-	extRec := &controllers.ExtensionReconciler{
+	extRec := &controller.ExtensionReconciler{
 		Client:     mgr.GetClient(),
 		Scheme:     mgr.GetScheme(),
 		KubeConfig: cfg,
@@ -131,15 +158,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	appRec := &controllers.ReconcilerWrapper[*suffiksv1.Application]{
-		Client: mgr.GetClient(),
-		Child: &controllers.AppReconciler{
-			Scheme:   mgr.GetScheme(),
-			Client:   mgr.GetClient(),
-			Defaults: ctrlConfig.ApplicationDefaults,
+	appRec := controller.New[*suffiksv1.Application](
+		mgr.GetClient(),
+		&controller.AppReconciler{
+			Scheme: mgr.GetScheme(),
+			Client: mgr.GetClient(),
+			// Defaults: ctrlConfig.ApplicationDefaults,
 		},
-		CRDController: extController,
-	}
+		extController,
+	)
 	if err = appRec.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
 		os.Exit(1)
@@ -158,7 +185,7 @@ func main() {
 	// 	os.Exit(1)
 	// }
 
-	if !ctrlConfig.WebhooksDisabled {
+	if true { //!ctrlConfig.WebhooksDisabled {
 		if err = (&suffiksv1.Extension{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Extension")
 			os.Exit(1)
@@ -185,19 +212,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctx := ctrl.SetupSignalHandler()
 	if err := extRec.RefreshCRD(ctx); err != nil {
 		panic(err)
 	}
 
 	tracerLog := ctrl.Log.WithName("tracing")
-	err = tracing.Provider(ctx, tracerLog, ctrlConfig.Tracing)
+	err = tracing.Provider(ctx, tracerLog) // ctrlConfig.Tracing)
 	if err != nil {
 		setupLog.Error(err, "unable to create tracer provider")
 		os.Exit(1)
 	}
 
-	go documentationServer(ctx, ctrlConfig.DocumentationAddress, crdMgr, setupLog)
+	go documentationServer(ctx, "" /*ctrlConfig.DocumentationAddress*/, crdMgr, setupLog)
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
@@ -210,17 +236,16 @@ func main() {
 	}
 }
 
-func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionManager, log logr.Logger) {
-	fmt.Println("################ STARTING DOCUMENTATION SERVER ################")
+func documentationServer(ctx context.Context, addr string, mgr *extension.ExtensionManager, log logr.Logger) {
 	ctrl := docparser.NewController()
-	ctrl.AddFS("_suffiks", suffiks.DocFiles)
+	_ = ctrl.AddFS("_suffiks", suffiks.DocFiles)
 	go updateDocs(ctx, ctrl, mgr, log)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		cats := ctrl.GetAll()
-		json.NewEncoder(w).Encode(cats)
+		_ = json.NewEncoder(w).Encode(cats)
 	})
 
 	if addr == "" {
@@ -245,18 +270,16 @@ func documentationServer(ctx context.Context, addr string, mgr *base.ExtensionMa
 	}
 }
 
-func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *base.ExtensionManager, log logr.Logger) {
+func updateDocs(ctx context.Context, ctrl *docparser.Controller, mgr *extension.ExtensionManager, log logr.Logger) {
 	for {
 		for _, ext := range mgr.All() {
-			fmt.Println("Start update docs for", ext.GetName())
-			pages, err := ext.Client().Documentation(ctx, &protogen.DocumentationRequest{})
+			pages, err := ext.Documentation(ctx)
 			if err != nil {
 				log.V(5).Error(err, "unable to get documentation")
 				continue
 			}
 
-			fmt.Printf("Got %v pages from %v\n", len(pages.Pages), ext.GetName())
-			ctrl.Parse(ext.Name, pages.GetPages())
+			_ = ctrl.Parse(ext.Name(), pages.GetPages())
 		}
 		select {
 		case <-ctx.Done():

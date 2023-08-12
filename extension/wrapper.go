@@ -70,7 +70,7 @@ const (
 
 type Extension[Object any] interface {
 	Sync(ctx context.Context, owner Owner, obj Object, resp *ResponseWriter) error
-	Delete(ctx context.Context, owner Owner, obj Object) error
+	Delete(ctx context.Context, owner Owner, obj Object) (protogen.DeleteResponse, error)
 }
 
 type ValidatableExtension[Object any] interface {

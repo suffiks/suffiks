@@ -3,13 +3,24 @@ package extension
 import (
 	"os"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+type TracingConfig struct {
+	// OTLP GRPC tracing endpoint. If empty, tracing is disabled.
+	OTLPEndpoint string `json:"otlpEndpoint,omitempty"`
+
+	// Attributes to be added to all spans.
+	Attributes map[string]string `json:"attributes,omitempty"`
+}
+
+func (t TracingConfig) Enabled() bool {
+	return t.OTLPEndpoint != ""
+}
+
 type Config interface {
 	getListenAddress() string
-	getTracing() suffiksv1.TracingConfig
+	getTracing() TracingConfig
 }
 
 type ConfigSpec struct {
@@ -19,7 +30,7 @@ type ConfigSpec struct {
 
 	// Tracing is used to configure tracing exporter.
 	// +optional
-	Tracing suffiksv1.TracingConfig `json:"tracing"`
+	Tracing TracingConfig `json:"tracing"`
 }
 
 func (c ConfigSpec) getListenAddress() string {
@@ -30,7 +41,7 @@ func (c ConfigSpec) getListenAddress() string {
 	return c.ListenAddress
 }
 
-func (c ConfigSpec) getTracing() suffiksv1.TracingConfig {
+func (c ConfigSpec) getTracing() TracingConfig {
 	return c.Tracing
 }
 

@@ -4,9 +4,9 @@ import (
 	"os"
 	"testing"
 
-	base "github.com/suffiks/suffiks/apis/suffiks/v1"
 	"github.com/suffiks/suffiks/extension"
 	"github.com/suffiks/suffiks/extension/testutil"
+	base "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

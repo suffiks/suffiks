@@ -5,9 +5,9 @@ import (
 	"io"
 	"testing"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
-	"github.com/suffiks/suffiks/base"
 	"github.com/suffiks/suffiks/extension"
+	controller "github.com/suffiks/suffiks/internal/controller"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -36,6 +36,8 @@ func NewIntegrationTester[Ext any](spec io.Reader, extSetup SetupExtension[Ext])
 }
 
 func (i *IntegrationTester[Ext]) Run(t *testing.T, tests ...TestCase) {
+	t.Helper()
+
 	existing := []runtime.Object{}
 	for _, test := range tests {
 		existing = append(existing, test.existing()...)
@@ -49,8 +51,10 @@ func (i *IntegrationTester[Ext]) Run(t *testing.T, tests ...TestCase) {
 	}
 	ctx := context.Background()
 
-	tr.Run(ctx)
-	defer tr.Stop()
+	if err := tr.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tr.Stop() }()
 
 	for _, test := range tests {
 		t.Run(test.name(), func(t *testing.T) {
@@ -66,7 +70,7 @@ func (i *IntegrationTester[Ext]) runTest(t *testing.T, client *fake.Clientset, t
 }
 
 type TestCase interface {
-	runTest(t *testing.T, ctrl *base.ExtensionController, client *fake.Clientset)
+	runTest(t *testing.T, ctrl *controller.ExtensionController, client *fake.Clientset)
 	name() string
 	existing() []runtime.Object
 }
@@ -95,7 +99,7 @@ func getName(obj runtime.Object) string {
 	return ns.GetName()
 }
 
-func fixObject(t *testing.T, obj base.Object) base.Object {
+func fixObject(t *testing.T, obj controller.Object) controller.Object {
 	if obj.GetObjectKind().GroupVersionKind().Kind == "" {
 		switch v := obj.(type) {
 		case *suffiksv1.Application:

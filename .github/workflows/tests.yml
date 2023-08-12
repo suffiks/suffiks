@@ -1,21 +1,103 @@
 name: Go tests
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+
+      - name: Get Go version from .tool-versions
+        id: go-version
+        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.20.1
+          go-version: ${{ steps.go-version.outputs.GOVERSION }}
 
       - name: Tests
-        run: go test ./...
+        run: make test-ci
+
+  lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Let golangci-lint comment on PRs
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Get Go version from .tool-versions
+        id: go-version
+        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ steps.go-version.outputs.GOVERSION }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.53
+
+          # Optional: show only new issues if it's a pull request. The default value is `false`.
+          only-new-issues: true
+
+          # Optional: if set to true, then the action won't cache or restore ~/go/pkg.
+          skip-pkg-cache: true
+
+          args: --timeout=30m
+
+  generated-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install asdf
+        uses: asdf-vm/actions/setup@v2
+
+      - name: asdf cache
+        id: asdf-cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.asdf/
+          key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
+
+      - name: Install CD tools from .tool-versions
+        if: steps.asdf-cache.outputs.cache-hit != 'true'
+        uses: asdf-vm/actions/install@v2
+        with:
+          # Go is a dependency on two of the tools, so we install it first.
+          before_install: |
+            asdf install golang latest
+            asdf global golang latest
+
+      - name: Find go cache dir
+        id: go-cache
+        run: |
+          # Clear cache dirs to avoid error when restoring
+          go clean -cache -modcache
+          echo "gocache=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+          echo "gomodcache=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
+
+      - name: Cache go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ steps.go-cache.outputs.gocache }}
+            ${{ steps.go-cache.outputs.gomodcache }}
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+
+      - name: Check generated code
+        run: |
+          make generate
+          make manifests
+          make client
+          make gen-extensions
+          make gen-wasi-env
+          git diff --exit-code --name-only

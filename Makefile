@@ -5,6 +5,8 @@ IMG ?= ghcr.io/suffiks/suffiks:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.0
 
+DOCKER_GO_VERSION?=$(shell grep -E '^golang (.*)$$' .tool-versions | awk '{print $$2}')
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -41,25 +43,61 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./apis/..." output:crd:artifacts:config=config/crd/bases
-	$(CONTROLLER_GEN) rbac:roleName=manager-role webhook paths="./controllers/..."
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./pkg/api/..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role webhook paths="./internal/controller/..."
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object paths="./apis/..."
-	$(CONTROLLER_GEN) object paths="./docparser/..."
+	$(CONTROLLER_GEN) object paths="./pkg/api/..."
+	$(CONTROLLER_GEN) object paths="./internal/docparser/..."
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
 .PHONY: vet
-vet: ## Run go vet against code.
+vet: vulncheck ## Run go vet against code.
 	go vet ./...
 
+.PHONY: vulncheck
+vulncheck: ## Run gosec against code.
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: manifests generate fmt vet envtest test-ci ## Run tests.
+
+.PHONY: test-ci
+test-ci: envtest ## Run tests without generating code or checking for fmt/vet.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ./... -coverprofile cover.out
+
+.PHONY: client
+client: ## Generate client code.
+	rm -rf pkg/client
+
+	go run k8s.io/code-generator/cmd/client-gen \
+		--clientset-name "versioned" \
+		--input-base "" \
+		--input github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
+		--output-package github.com/suffiks/suffiks/pkg/client/clientset \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	go run k8s.io/code-generator/cmd/lister-gen \
+		--input-dirs github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
+		--output-package github.com/suffiks/suffiks/pkg/client/lister \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	go run k8s.io/code-generator/cmd/informer-gen \
+		--input-dirs github.com/suffiks/suffiks/pkg/api/suffiks/v1 \
+		--versioned-clientset-package github.com/suffiks/suffiks/pkg/client/clientset/versioned \
+		--listers-package github.com/suffiks/suffiks/pkg/client/lister \
+		--output-package github.com/suffiks/suffiks/pkg/client/informer \
+		-h ./hack/boilerplate.go.txt \
+		--output-base .
+
+	mv github.com/suffiks/suffiks/pkg/client pkg/client
+	rm -rf github.com
 
 ##@ Build
 
@@ -72,7 +110,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 	go run ./cmd/suffiks/main.go
 
 docker-build: #test ## Build docker image with the manager.
-	docker build -t ${IMG} .
+	docker build --build-arg="GO_VERSION=${DOCKER_GO_VERSION}" -t ${IMG} .
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}
@@ -89,13 +127,10 @@ kind: docker-build
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: test ## Build and push docker image for the manager for cross-platform support
-	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile.cross .
+	- docker buildx build --build-arg="GO_VERSION=${DOCKER_GO_VERSION}" --platform=$(PLATFORMS) --tag ${IMG} -f Dockerfile .
 	- docker buildx rm project-v3-builder
-	rm Dockerfile.cross
 
 ##@ Deployment
 
@@ -122,19 +157,17 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 ##@ extensions
 gen-extensions:
-	mkdir -p extension/protogen
 	protoc \
-		-I extension/proto/thirdparty \
 		-I extension/proto/ \
-		--go_opt=Mk8s.io/api/core/v1/generated.proto=k8s.io/api/core/v1 \
-		--go_opt=Mk8s.io/apimachinery/pkg/api/resource/generated.proto=k8s.io/apimachinery/pkg/api/resource \
-		--go_opt=Mk8s.io/apimachinery/pkg/apis/meta/v1/generated.proto=k8s.io/apimachinery/pkg/apis/meta/v1 \
-		--go_opt=Mk8s.io/apimachinery/pkg/runtime/generated.proto=k8s.io/apimachinery/pkg/runtime \
-		--go_opt=Mk8s.io/apimachinery/pkg/runtime/schema/generated.proto=k8s.io/apimachinery/pkg/runtime/schema \
-		--go_opt=Mk8s.io/apimachinery/pkg/util/intstr/generated.proto=k8s.io/apimachinery/pkg/util/intstr \
 		./extension/proto/extension.proto \
-		--go_out=. \
-		--go-grpc_out=.
+		./extension/proto/k8s.proto \
+		--go_opt=paths=source_relative \
+		--go_out=extension/protogen \
+		--go-grpc_opt=paths=source_relative \
+		--go-grpc_out=extension/protogen \
+
+gen-wasi-env:
+	go run ./cmd/gen_wasi_env > ./extension/wasi/wasi_env.json
 
 ##@ Build Dependencies
 
@@ -149,10 +182,9 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.10.0
+KUSTOMIZE_VERSION ?= v5.0.1
+CONTROLLER_TOOLS_VERSION ?= v0.12.0
 
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
 $(KUSTOMIZE): $(LOCALBIN)
@@ -160,7 +192,7 @@ $(KUSTOMIZE): $(LOCALBIN)
 		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
 		rm -rf $(LOCALBIN)/kustomize; \
 	fi
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
+	test -s $(LOCALBIN)/kustomize || GOBIN=$(LOCALBIN) GO111MODULE=on go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION)
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
@@ -172,17 +204,3 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
-
-.PHONY: clientset
-clientset: TMPDIR := $(shell mktemp -d)
-clientset: ## Generate clientset
-	go run k8s.io/code-generator/cmd/client-gen \
-		--clientset-name versioned \
-		--input-base=github.com/suffiks/suffiks/apis --input-dirs=. --input="suffiks/v1" \
-		--output-package=github.com/suffiks/suffiks/pkg/client/clientset_generated/ --output-base=$(TMPDIR) \
-		--go-header-file hack/boilerplate.go.txt
-	cp -r $(TMPDIR)/github.com/suffiks/suffiks/pkg .
-# Application is special, so reference the base package
-	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/application.go
-	sed -i 's|github.com/suffiks/suffiks/apis/suffiks/v1|github.com/suffiks/suffiks/base|' pkg/client/clientset_generated/versioned/typed/suffiks/v1/fake/fake_application.go
-	rm -rf $(TMPDIR)

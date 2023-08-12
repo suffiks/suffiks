@@ -15,8 +15,11 @@ import (
 	"strings"
 	"text/template"
 
-	suffiksv1 "github.com/suffiks/suffiks/apis/suffiks/v1"
+	"github.com/suffiks/suffiks/cmd/extgen/wasi"
+	suffiksv1 "github.com/suffiks/suffiks/pkg/api/suffiks/v1"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-tools/pkg/crd"
@@ -37,7 +40,7 @@ func main() {
 	app := &cli.App{
 		Name:     "extgen",
 		Usage:    "Generate extension code",
-		Commands: []*cli.Command{newGen, crdGen, rbacGen},
+		Commands: []*cli.Command{newGen, crdGen, rbacGen, wasi.New()},
 	}
 
 	if err := app.Run(os.Args); err != nil {
@@ -62,7 +65,7 @@ var crdGen = &cli.Command{
 		&cli.StringFlag{
 			Name:  "source",
 			Usage: "Source directory where the types are defined",
-			Value: "./controllers",
+			Value: "./controller",
 		},
 	},
 
@@ -131,6 +134,9 @@ var crdGen = &cli.Command{
 					Name: strings.ToLower(k.Name),
 				},
 				Spec: suffiksv1.ExtensionSpec{
+					Controller: suffiksv1.ControllerSpec{
+						GRPC: &suffiksv1.ExtensionGRPCController{},
+					},
 					OpenAPIV3Schema: runtime.RawExtension{
 						Raw: b,
 					},
@@ -208,7 +214,7 @@ var rbacGen = &cli.Command{
 			return err
 		}
 		registry := &markers.Registry{}
-		registry.Register(rbac.RuleDefinition)
+		_ = registry.Register(rbac.RuleDefinition)
 		collector := &markers.Collector{
 			Registry: registry,
 		}
@@ -321,7 +327,7 @@ var newGen = &cli.Command{
 		}{
 			Repo:       repo,
 			Name:       name,
-			GoName:     strings.Title(name),
+			GoName:     cases.Title(language.Und).String(name),
 			Receiver:   strings.ToLower(name[0:1]),
 			Validation: c.Bool("validation"),
 			Defaulting: c.Bool("defaulting"),

@@ -1,0 +1,33 @@
+apiVersion: suffiks.com/v1
+kind: Extension
+metadata:
+  name: ingresses
+spec:
+  controller:
+    wasi:
+      image: suffiks/wasmer-wasi:latest
+  openAPIV3Schema:
+    properties:
+      ingresses:
+        description:
+          List of URLs that will route HTTPS traffic to the application.
+          All URLs must start with `https://`. Domain availability differs according
+          to which environment your application is running in.
+        items:
+          properties:
+            host:
+              type: string
+            paths:
+              items:
+                type: string
+              type: array
+          required:
+            - host
+          type: object
+        type: array
+    type: object
+  targets:
+    - Application
+  webhooks:
+    defaulting: true
+    validation: true

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/suffiks/suffiks/base"
+	"github.com/suffiks/suffiks/internal/controller"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes/fake"
@@ -17,7 +17,7 @@ type DeleteTest struct {
 	Name string
 	// Existing is the list of objects that should exist before the test is run.
 	Existing []runtime.Object
-	Object   base.Object
+	Object   controller.Object
 	// Expected is the list of expected resources after the test case.
 	ExpectedRemaining []runtime.Object
 	ExpectedDeleted   []Deleted
@@ -26,7 +26,7 @@ type DeleteTest struct {
 
 func (s DeleteTest) name() string               { return s.Name }
 func (s DeleteTest) existing() []runtime.Object { return s.Existing }
-func (s DeleteTest) runTest(t *testing.T, ctrl *base.ExtensionController, client *fake.Clientset) {
+func (s DeleteTest) runTest(t *testing.T, ctrl *controller.ExtensionController, client *fake.Clientset) {
 	if err := ctrl.Delete(context.Background(), fixObject(t, s.Object)); err != nil {
 		if s.ErrCheck == nil {
 			t.Fatal(err)

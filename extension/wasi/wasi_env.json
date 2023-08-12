@@ -1,0 +1,260 @@
+[
+  {
+    "name": "AddEnv",
+    "doc": "addEnv adds an environment variable to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddEnvFrom",
+    "doc": "addEnvFrom adds an environment variable from a secret or configmap to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nEnvFrom proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddLabel",
+    "doc": "addLabel adds a label to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddAnnotation",
+    "doc": "addAnnotation adds an annotation to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nKeyValue proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddInitContainer",
+    "doc": "addInitContainer adds an init container to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nContainer proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "AddSidecar",
+    "doc": "addSidecar adds a sidecar to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nContainer proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "MergePatch",
+    "doc": "mergePatch applies a merge patch to the workload.\n\n`ptr` and `size` are the pointer and size of the serialized\nMergePatch JSON.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "ValidationError",
+    "doc": "validationError adds a validation error during a validation request.\n\n`ptr` and `size` are the pointer and size of the serialized\nValidationError proto.",
+    "args": [
+      {
+        "name": "ptr",
+        "type": "uint32"
+      },
+      {
+        "name": "size",
+        "type": "uint32"
+      }
+    ],
+    "return": []
+  },
+  {
+    "name": "GetOwner",
+    "doc": "getOwner returns the OwnerReference proto of the workload.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetSpec",
+    "doc": "getSpec returns the Spec JSON of the workload.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetOld",
+    "doc": "getOld returns the Old JSON of the workload.\n\nThis is only valid for validation requests.\n\nThe returned value is a uint64 which uses the first 32 bits to\nstore the pointer, and the last 32 bits to store the size.",
+    "args": [],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "CreateResource",
+    "doc": "createResource creates a resource in the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "specPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "specSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "UpdateResource",
+    "doc": "updateResource updates a resource in the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`specPtr` and `specSize` are the pointer and size of the serialized\nResource json.",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "specPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "specSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "DeleteResource",
+    "doc": "deleteResource deletes a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "namePtr",
+        "type": "uint32"
+      },
+      {
+        "name": "nameSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "GetResource",
+    "doc": "getResource returns a resource from the Kubernetes API server.\n\n`gvrPtr` and `gvrSize` are the pointer and size of the serialized\nGroupVersionResource proto.\n\n`namePtr` and `nameSize` are the pointer and size of the serialized\nstring name of the resource.",
+    "args": [
+      {
+        "name": "gvrPtr",
+        "type": "uint32"
+      },
+      {
+        "name": "gvrSize",
+        "type": "uint32"
+      },
+      {
+        "name": "namePtr",
+        "type": "uint32"
+      },
+      {
+        "name": "nameSize",
+        "type": "uint32"
+      }
+    ],
+    "return": [
+      {
+        "type": "uint64"
+      }
+    ]
+  }
+]

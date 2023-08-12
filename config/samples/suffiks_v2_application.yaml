@@ -1,16 +1,16 @@
 apiVersion: suffiks.com/v1
 kind: Application
 metadata:
-  name: application-sample
+  name: application-sample3
   namespace: default
   # annotations:
   #   suffiks.com/security-does-not-matter: "true"
 spec:
   port: 80
   image: nginxdemos/hello # Will fail with podsecurity
-  # ingresses:
-  #   - host: hello.suffiks.com
-  #     paths: ["/"]
+  ingresses:
+    - host: hello.suffiks.com
+      # paths: ["/"]
   # image: borosr/go-echo
   # replicas:
   # min: 2

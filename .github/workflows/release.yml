@@ -2,7 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    branches: [main]
   push:
     # Publish semver tags as releases.
     tags: ["v*.*.*"]
@@ -22,16 +21,19 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Get Go version from .tool-versions
+        id: go-version
+        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
-          go-version: 1.20.1
+          go-version: ${{ steps.go-version.outputs.GOVERSION }}
 
       - name: Tests
-        run: go test ./...
-
+        run: make test
 
       # ARM64 is really slow with buildx on GHA, we might want to build it using the go
       # tooling and then just copy the resulting binaries to the release container images.
@@ -69,11 +71,13 @@ jobs:
             type=sha
 
       - name: Build and push
-        uses: docker/build-push-action@v3
+        uses: docker/build-push-action@v4
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
+          build-args: |
+            GO_VERSION=${{ steps.go-version.outputs.GOVERSION }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha

@@ -33,7 +33,9 @@ jobs:
 
       - name: Get Go version from .tool-versions
         id: go-version
-        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
+        run: |
+          echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
+          echo GOLANGCI_LINT=$(grep -E '^golangci-lint (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
 
       - name: Set up Go
         uses: actions/setup-go@v4
@@ -43,7 +45,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.53
+          version: v${{ steps.go-version.outputs.GOLANGCI_LINT }}
 
           # Optional: show only new issues if it's a pull request. The default value is `false`.
           only-new-issues: true

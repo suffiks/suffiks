@@ -6,19 +6,20 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  GOVERSION: 1.20.6
-
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
+      - name: Get Go version from .tool-versions
+        id: go-version
+        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GOVERSION }}
+          go-version: ${{ steps.go-version.outputs.GOVERSION }}
 
       - name: Tests
         run: make test-ci
@@ -32,10 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Get Go version from .tool-versions
+        id: go-version
+        run: echo GOVERSION=$(grep -E '^golang (.*)$' .tool-versions | awk '{print $2}') >> "$GITHUB_OUTPUT"
+
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: ${{ env.GOVERSION }}
+          go-version: ${{ steps.go-version.outputs.GOVERSION }}
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3

@@ -1,6 +1,8 @@
 # Copy from traefik: https://github.com/traefik/traefik/blob/master/script/codegen.Dockerfile
+ARG GO_VERSION=1.21
 
-FROM golang:1.20
+# Build the manager binary
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} as builder
 
 ARG USER=$USER
 ARG UID=$UID

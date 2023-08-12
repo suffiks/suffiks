@@ -1,4 +1,6 @@
-FROM golang:1.20 as builder
+ARG GO_VERSION=1.21
+
+FROM golang:${GO_VERSION}-alpine as builder
 
 RUN apk add --no-cache git
 

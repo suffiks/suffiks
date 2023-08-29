@@ -287,12 +287,63 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 							Command:   spec.Command,
 							Ports:     ports,
 							Resources: rq,
+							Env:       envVars(spec.Env),
+							EnvFrom:   envFroms(spec.EnvFrom),
 						},
 					},
 				},
 			},
 		},
 	}
+}
+
+func envFroms(froms []suffiksv1.EnvFrom) []corev1.EnvFromSource {
+	result := make([]corev1.EnvFromSource, 0, len(froms))
+	for _, from := range froms {
+		if len(from.ConfigMap) > 0 {
+			result = append(result, corev1.EnvFromSource{
+				ConfigMapRef: &corev1.ConfigMapEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: from.ConfigMap,
+					},
+					Optional: pointer.Bool(true),
+				},
+			})
+		} else {
+			result = append(result, corev1.EnvFromSource{
+				SecretRef: &corev1.SecretEnvSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: from.Secret,
+					},
+					Optional: pointer.Bool(true),
+				},
+			})
+		}
+	}
+	return result
+}
+
+func envVars(vars suffiksv1.EnvVars) []corev1.EnvVar {
+	result := make([]corev1.EnvVar, 0, len(vars))
+	for _, env := range vars {
+		if len(env.Value) > 0 {
+			result = append(result, corev1.EnvVar{
+				Name:  env.Name,
+				Value: env.Value,
+			})
+		} else {
+			result = append(result, corev1.EnvVar{
+				Name: env.Name,
+				ValueFrom: &corev1.EnvVarSource{
+					FieldRef: &corev1.ObjectFieldSelector{
+						FieldPath: env.ValueFrom.FieldRef.FieldPath,
+					},
+				},
+			})
+		}
+	}
+
+	return result
 }
 
 func (a *AppReconciler) objectMeta(app *suffiksv1.Application) metav1.ObjectMeta {

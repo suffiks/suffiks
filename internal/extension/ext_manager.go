@@ -19,11 +19,11 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-type KeyValue map[string]any
-
-type Option func(*ExtensionManager)
-
-type WASILoader func(ctx context.Context, image, tag string) (map[string][]byte, error)
+type (
+	KeyValue   map[string]any
+	Option     func(*ExtensionManager)
+	WASILoader func(ctx context.Context, image, tag string) (map[string][]byte, error)
+)
 
 func WithWASILoader(loader WASILoader) Option {
 	return func(mgr *ExtensionManager) {

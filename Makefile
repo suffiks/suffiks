@@ -51,6 +51,9 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 	$(CONTROLLER_GEN) object paths="./pkg/api/..."
 	$(CONTROLLER_GEN) object paths="./internal/docparser/..."
 
+.PHONY: generate-all
+generate-all: generate manifests client gen-extensions gen-wasi-env ## Run all code generators
+
 .PHONY: fmt
 fmt: ## Run go fmt against code.
 	go fmt ./...

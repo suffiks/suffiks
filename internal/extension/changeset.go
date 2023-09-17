@@ -8,7 +8,7 @@ import (
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/suffiks/suffiks/extension/protogen"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -54,7 +54,7 @@ func (c *Changeset) Add(resp *protogen.Response) error {
 					LocalObjectReference: v1.LocalObjectReference{
 						Name: r.EnvFrom.Name,
 					},
-					Optional: pointer.Bool(r.EnvFrom.Optional),
+					Optional: ptr.To(r.EnvFrom.Optional),
 				},
 			})
 		case protogen.EnvFromType_CONFIGMAP:
@@ -63,7 +63,7 @@ func (c *Changeset) Add(resp *protogen.Response) error {
 					LocalObjectReference: v1.LocalObjectReference{
 						Name: r.EnvFrom.Name,
 					},
-					Optional: pointer.Bool(r.EnvFrom.Optional),
+					Optional: ptr.To(r.EnvFrom.Optional),
 				},
 			})
 		default:

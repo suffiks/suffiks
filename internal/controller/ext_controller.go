@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +32,7 @@ func (l *lockedList[T]) Add(val T) {
 func (l *lockedList[T]) Contains(val T) bool {
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	return contains(l.list, val)
+	return slices.Contains(l.list, val)
 }
 
 func (l *lockedList[T]) Slice() []T {
@@ -461,7 +462,7 @@ func createOrUpdateRequest(o Object, v extension.KeyValue, ext extension.Extensi
 
 	data := map[string]any{}
 	for key, val := range v {
-		if contains(ext.RootKeys(), key) {
+		if slices.Contains(ext.RootKeys(), key) {
 			data[key] = val
 		}
 	}
@@ -477,13 +478,4 @@ func createOrUpdateRequest(o Object, v extension.KeyValue, ext extension.Extensi
 	}
 
 	return ur, nil
-}
-
-func contains[T comparable](arr []T, val T) bool {
-	for _, v := range arr {
-		if v == val {
-			return true
-		}
-	}
-	return false
 }

@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -271,7 +271,7 @@ func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1
 	return &appsv1.Deployment{
 		ObjectMeta: a.objectMeta(app),
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: ptr.To[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -306,7 +306,7 @@ func envFroms(froms []suffiksv1.EnvFrom) []corev1.EnvFromSource {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: from.ConfigMap,
 					},
-					Optional: pointer.Bool(true),
+					Optional: ptr.To(true),
 				},
 			})
 		} else {
@@ -315,7 +315,7 @@ func envFroms(froms []suffiksv1.EnvFrom) []corev1.EnvFromSource {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: from.Secret,
 					},
-					Optional: pointer.Bool(true),
+					Optional: ptr.To(true),
 				},
 			})
 		}

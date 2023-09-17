@@ -29,8 +29,16 @@ func (r *Extension) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Validator = &Extension{}
 
-func (r *Extension) validateExtension() error {
-	errs := r.validateSpec()
+func (r *Extension) validateExtension(opts ...valOpts) error {
+	validateOpts := &validateOpts{
+		ociGetter: oci.Get,
+	}
+
+	for _, opt := range opts {
+		opt(validateOpts)
+	}
+
+	errs := r.validateSpec(validateOpts)
 	if len(errs) == 0 {
 		return nil
 	}
@@ -38,15 +46,15 @@ func (r *Extension) validateExtension() error {
 	return apierrors.NewInvalid(r.GroupVersionKind().GroupKind(), r.Name, errs)
 }
 
-func (r *Extension) validateSpec() (allErrs field.ErrorList) {
-	validations := []func() *field.Error{
+func (r *Extension) validateSpec(opts *validateOpts) (allErrs field.ErrorList) {
+	validations := []func(opts *validateOpts) *field.Error{
 		r.validateSpecTarget,
 		r.validateSpecOpenAPIV3Schema,
 		r.validateWASIImage,
 	}
 
 	for _, v := range validations {
-		if err := v(); err != nil {
+		if err := v(opts); err != nil {
 			allErrs = append(allErrs, err)
 		}
 	}
@@ -54,7 +62,7 @@ func (r *Extension) validateSpec() (allErrs field.ErrorList) {
 	return allErrs
 }
 
-func (r *Extension) validateSpecTarget() *field.Error {
+func (r *Extension) validateSpecTarget(opts *validateOpts) *field.Error {
 	for _, target := range r.Spec.Targets {
 		switch target {
 		case "Application", "Work":
@@ -65,7 +73,7 @@ func (r *Extension) validateSpecTarget() *field.Error {
 	return nil
 }
 
-func (r *Extension) validateSpecOpenAPIV3Schema() *field.Error {
+func (r *Extension) validateSpecOpenAPIV3Schema(opts *validateOpts) *field.Error {
 	fieldPath := field.NewPath("spec", "openAPIV3Schema")
 	props := &apiextv1.JSONSchemaProps{}
 	if err := json.Unmarshal(r.Spec.OpenAPIV3Schema.Raw, props); err != nil {
@@ -80,7 +88,7 @@ func (r *Extension) validateSpecOpenAPIV3Schema() *field.Error {
 	return nil
 }
 
-func (r *Extension) validateWASIImage() *field.Error {
+func (r *Extension) validateWASIImage(opts *validateOpts) *field.Error {
 	if r.Spec.Controller.WASI == nil {
 		return nil
 	}
@@ -91,7 +99,7 @@ func (r *Extension) validateWASIImage() *field.Error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	_, err := oci.Get(ctx, r.Spec.Controller.WASI.Image, r.Spec.Controller.WASI.Tag)
+	_, err := opts.ociGetter(ctx, r.Spec.Controller.WASI.Image, r.Spec.Controller.WASI.Tag)
 	if err != nil {
 		return field.Invalid(field.NewPath("spec", "controller", "wasi", "image"), r.Spec.Controller.WASI.Image, err.Error())
 	}
@@ -115,4 +123,18 @@ func (r *Extension) ValidateUpdate(old runtime.Object) (admission.Warnings, erro
 func (r *Extension) ValidateDelete() (admission.Warnings, error) {
 	// NOT IN USE
 	return nil, nil
+}
+
+type (
+	ociGetter    func(ctx context.Context, image string, tag string) (map[string][]byte, error)
+	validateOpts struct {
+		ociGetter ociGetter
+	}
+	valOpts func(*validateOpts)
+)
+
+func withOciGetter(getter ociGetter) func(*validateOpts) {
+	return func(opts *validateOpts) {
+		opts.ociGetter = getter
+	}
 }

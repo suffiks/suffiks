@@ -92,6 +92,7 @@ func NewExtensionManager(ctx context.Context, files fs.FS, dynClient dynamic.Int
 
 func (c *ExtensionManager) Add(ext suffiksv1.Extension) error {
 	for _, target := range ext.Spec.Targets {
+		fmt.Println("Adding extension", ext.Name, "to target", target)
 		if err := c.add(ext, target); err != nil {
 			return err
 		}
@@ -125,7 +126,7 @@ func (c *ExtensionManager) addGRPC(ext suffiksv1.Extension, target suffiksv1.Tar
 	}
 
 	spec := ext.Spec.OpenAPIV3Schema.Raw
-	if err := g.Add(spec); err != nil {
+	if err := g.Add(ext.Name, spec); err != nil {
 		return err
 	}
 
@@ -161,7 +162,7 @@ func (c *ExtensionManager) addWASI(ext suffiksv1.Extension, target suffiksv1.Tar
 	}
 
 	spec := ext.Spec.OpenAPIV3Schema.Raw
-	if err := g.Add(spec); err != nil {
+	if err := g.Add(ext.Name, spec); err != nil {
 		return err
 	}
 
@@ -190,7 +191,7 @@ func (c *ExtensionManager) Remove(ext *suffiksv1.Extension) error {
 		if !ok {
 			return fmt.Errorf("%q not a valid target", target)
 		}
-		if err := g.Remove(ext.Spec.OpenAPIV3Schema.Raw); err != nil {
+		if err := g.Remove(ext.Name); err != nil {
 			return err
 		}
 	}

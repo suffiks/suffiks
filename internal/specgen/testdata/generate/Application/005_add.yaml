@@ -7,4 +7,6 @@ spec:
       properties:
         nested:
           type: string
+        other:
+          type: string
   type: object

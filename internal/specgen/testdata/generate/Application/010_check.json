@@ -89,27 +89,6 @@
           "description": "Your application's Docker image location and tag.",
           "type": "string"
         },
-        "ingresses": {
-          "description": "List of URLs that will route HTTPS traffic to the application. All URLs must start with `https://`. Domain availability differs according to which environment your application is running in.",
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "obj": {
-          "type": "object",
-          "properties": {
-            "key": {
-              "type": "string"
-            },
-            "nested": {
-              "type": "string"
-            },
-            "other": {
-              "type": "string"
-            }
-          }
-        },
         "port": {
           "description": "The port number which is exposed by the container and should receive traffic.",
           "type": "integer"

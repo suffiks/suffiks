@@ -1,7 +1,2 @@
-properties:
-  obj:
-    type: object
-    properties:
-      nested:
-        type: string
-type: object
+metadata:
+  name: ingress

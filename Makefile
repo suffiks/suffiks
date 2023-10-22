@@ -170,7 +170,7 @@ gen-extensions:
 		--go-grpc_out=extension/protogen \
 
 gen-wasi-env:
-	go run ./cmd/gen_wasi_env > ./extension/wasi/wasi_env.json
+	go run ./cmd/dev/gen_wasi_env > ./extension/wasi/wasi_env.json
 
 ##@ Build Dependencies
 

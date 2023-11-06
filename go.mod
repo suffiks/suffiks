@@ -3,10 +3,9 @@ module github.com/suffiks/suffiks
 go 1.21
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch/v5 v5.7.0
-	github.com/go-logr/logr v1.2.4
-	github.com/go-playground/validator/v10 v10.15.5
+	github.com/go-logr/logr v1.3.0
+	github.com/go-playground/validator/v10 v10.16.0
 	github.com/google/go-cmp v0.6.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/opencontainers/go-digest v1.0.0
@@ -16,7 +15,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/tetratelabs/wazero v1.5.0
 	github.com/urfave/cli/v2 v2.25.7
-	github.com/yuin/goldmark v1.5.6
+	github.com/yuin/goldmark v1.6.0
 	github.com/yuin/goldmark-meta v1.1.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.45.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
@@ -26,9 +25,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
 	go.uber.org/zap v1.26.0
-	golang.org/x/sync v0.4.0
-	golang.org/x/text v0.13.0
-	golang.org/x/tools v0.14.0
+	golang.org/x/sync v0.5.0
+	golang.org/x/text v0.14.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 	k8s.io/api v0.28.3
@@ -39,10 +37,10 @@ require (
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	mvdan.cc/gofumpt v0.5.0
-	oras.land/oras-go/v2 v2.3.0
+	oras.land/oras-go/v2 v2.3.1
 	sigs.k8s.io/controller-runtime v0.16.3
 	sigs.k8s.io/controller-tools v0.13.0
-	sigs.k8s.io/yaml v1.3.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -51,6 +49,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
@@ -98,6 +97,7 @@ require (
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect

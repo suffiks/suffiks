@@ -193,7 +193,9 @@ func (a *ApplicationSpec) UnmarshalJSON(b []byte) error {
 	}
 
 	*a = ApplicationSpec(app)
-	a.Rest.Object = rest
+	if len(rest) > 0 {
+		a.Rest.Object = rest
+	}
 	return nil
 }
 

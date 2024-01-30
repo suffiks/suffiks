@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
@@ -20,7 +21,7 @@ func TestExtension_ValidateCreate(t *testing.T) {
 		ext     *Extension
 		wantErr bool
 	}{
-		"valid": {
+		"valid grpc": {
 			ext: &Extension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
@@ -72,6 +73,33 @@ func TestExtension_ValidateCreate(t *testing.T) {
 				},
 			},
 		},
+
+		"valid wasi": {
+			ext: &Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: ExtensionSpec{
+					Targets: []Target{"Application", "Work"},
+					Controller: ControllerSpec{
+						WASI: &ExtensionWASIController{
+							Image: "somenamespace/somerepo",
+							Tag:   "sometag",
+						},
+					},
+					Webhooks: ExtensionWebhooks{
+						Validation: true,
+						Defaulting: true,
+					},
+					Always: true,
+					OpenAPIV3Schema: mustJSON(apiextv1.JSONSchemaProps{
+						Type: "object",
+					}),
+				},
+			},
+		},
+
 		"invalid target": {
 			ext: &Extension{
 				ObjectMeta: metav1.ObjectMeta{
@@ -130,14 +158,36 @@ func TestExtension_ValidateCreate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+
+		"empty wasi image": {
+			ext: &Extension{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nowasiimg",
+					Namespace: "test",
+				},
+				Spec: ExtensionSpec{
+					Targets: []Target{"Application"},
+					Controller: ControllerSpec{
+						WASI: &ExtensionWASIController{},
+					},
+					OpenAPIV3Schema: mustJSON(apiextv1.JSONSchemaProps{
+						Type: "string",
+					}),
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	opts := []valOpts{
+		withOciGetter(func(ctx context.Context, image, tag string) (map[string][]byte, error) {
+			return nil, nil
+		}),
 	}
 
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			if _, err := tt.ext.ValidateCreate(); (err != nil) != tt.wantErr {
-				t.Errorf("Extension.ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if _, err := tt.ext.ValidateUpdate(&Extension{}); (err != nil) != tt.wantErr {
+			if err := tt.ext.validateExtension(opts...); (err != nil) != tt.wantErr {
 				t.Errorf("Extension.ValidateCreate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

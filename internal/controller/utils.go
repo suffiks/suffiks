@@ -8,6 +8,7 @@ type Object interface {
 	GetSpec() []byte
 }
 
+// mergeMaps merges two maps, overwriting the values of the first map with the values of the later map.
 func mergeMaps(maps ...map[string]string) map[string]string {
 	ret := map[string]string{}
 	for _, m := range maps {

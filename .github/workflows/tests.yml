@@ -60,24 +60,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install asdf
-        uses: asdf-vm/actions/setup@v3
+      - name: Install Mise
+        uses: jdx/mise-action@v2
 
-      - name: asdf cache
-        id: asdf-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.asdf/
-          key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
+      # - name: asdf cache
+      #   id: asdf-cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: ~/.asdf/
+      #     key: ${{ runner.os }}-asdf-${{ hashFiles('**/.tool-versions') }}
 
-      - name: Install CD tools from .tool-versions
-        if: steps.asdf-cache.outputs.cache-hit != 'true'
-        uses: asdf-vm/actions/install@v3
-        with:
-          # Go is a dependency on two of the tools, so we install it first.
-          before_install: |
-            asdf install golang latest
-            asdf global golang latest
+      # - name: Install CD tools from .tool-versions
+      #   if: steps.asdf-cache.outputs.cache-hit != 'true'
+      #   uses: asdf-vm/actions/install@v3
+      #   with:
+      #     # Go is a dependency on two of the tools, so we install it first.
+      #     before_install: |
+      #       asdf install golang latest
+      #       asdf global golang latest
 
       - name: Find go cache dir
         id: go-cache

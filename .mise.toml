@@ -1,0 +1,7 @@
+[tools]
+go = "latest"
+kubebuilder = "latest"
+protoc = "latest"
+protoc-gen-go = "latest"
+protoc-gen-go-grpc = "latest"
+golangci-lint = "latest"

@@ -156,7 +156,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	appRec := controller.New[*suffiksv1.Application](
+	appRec := controller.New(
 		mgr.GetClient(),
 		&controller.AppReconciler{
 			Scheme: mgr.GetScheme(),

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
+	"strings"
 
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
@@ -25,6 +27,8 @@ func (a *AlreadyDefinedError) Is(target error) bool {
 type Generator struct {
 	schema *apiextv1.JSONSchemaProps
 	crd    apiextv1.CustomResourceDefinition
+
+	appliedSchemas map[string]json.RawMessage
 }
 
 func FromYAML(r io.Reader) (*Generator, error) {
@@ -45,8 +49,9 @@ func FromYAML(r io.Reader) (*Generator, error) {
 	}
 
 	return &Generator{
-		schema: in.Spec.Versions[0].Schema.OpenAPIV3Schema,
-		crd:    *in,
+		schema:         in.Spec.Versions[0].Schema.OpenAPIV3Schema,
+		crd:            *in,
+		appliedSchemas: map[string]json.RawMessage{},
 	}, nil
 }
 
@@ -62,7 +67,13 @@ func (g *Generator) Schema() *apiextv1.JSONSchemaProps {
 	return g.schema.DeepCopy()
 }
 
-func (g *Generator) Add(ext json.RawMessage) error {
+func (g *Generator) Add(name string, ext json.RawMessage) error {
+	if _, ok := g.appliedSchemas[name]; ok {
+		if err := g.Remove(name); err != nil {
+			return err
+		}
+	}
+
 	in := &apiextv1.JSONSchemaProps{}
 	if err := json.Unmarshal(ext, in); err != nil {
 		return fmt.Errorf("Generator.Add: json umarshal error: %w", err)
@@ -72,6 +83,8 @@ func (g *Generator) Add(ext json.RawMessage) error {
 	if err := g.add(&spec, in.Properties, ""); err != nil {
 		return err
 	}
+
+	g.appliedSchemas[name] = slices.Clone(ext)
 	g.schema.Properties["spec"] = spec
 	return nil
 }
@@ -89,6 +102,7 @@ func (g *Generator) add(schema *apiextv1.JSONSchemaProps, properties map[string]
 					return err
 				}
 
+				fmt.Println("Setting", name, "at path", strings.Join(path, "->"))
 				schema.Properties[name] = inner
 				continue
 			}
@@ -105,21 +119,28 @@ func (g *Generator) add(schema *apiextv1.JSONSchemaProps, properties map[string]
 	return nil
 }
 
-func (g *Generator) Remove(ext json.RawMessage) error {
+func (g *Generator) Remove(name string) error {
+	ext, ok := g.appliedSchemas[name]
+	if !ok {
+		return nil
+	}
+
 	in := &apiextv1.JSONSchemaProps{}
 	if err := json.Unmarshal(ext, in); err != nil {
 		return err
 	}
 
 	spec := g.schema.Properties["spec"]
-	if err := g.remove(&spec, in.Properties, ""); err != nil {
+	if err := g.remove(spec, in.Properties, ""); err != nil {
 		return err
 	}
+
+	delete(g.appliedSchemas, name)
 	g.schema.Properties["spec"] = spec
 	return nil
 }
 
-func (g *Generator) remove(schema *apiextv1.JSONSchemaProps, properties map[string]apiextv1.JSONSchemaProps, path ...string) error {
+func (g *Generator) remove(schema apiextv1.JSONSchemaProps, properties map[string]apiextv1.JSONSchemaProps, path ...string) error {
 	if properties == nil {
 		return nil
 	}
@@ -131,7 +152,7 @@ func (g *Generator) remove(schema *apiextv1.JSONSchemaProps, properties map[stri
 
 		if val.Type == "object" {
 			inner := schema.Properties[name]
-			if err := g.remove(&inner, val.Properties, append(path, name)...); err != nil {
+			if err := g.remove(inner, val.Properties, append(path, name)...); err != nil {
 				return err
 			}
 			continue
@@ -140,11 +161,12 @@ func (g *Generator) remove(schema *apiextv1.JSONSchemaProps, properties map[stri
 		delete(schema.Properties, name)
 	}
 
-	for name, p := range schema.Properties {
-		if p.Type == "object" && len(p.Properties) == 0 && len(path) > 1 {
-			delete(schema.Properties, name)
+	if len(path) == 1 {
+		for name, p := range schema.Properties {
+			if p.Type == "object" && len(p.Properties) == 0 {
+				delete(schema.Properties, name)
+			}
 		}
 	}
-
 	return nil
 }

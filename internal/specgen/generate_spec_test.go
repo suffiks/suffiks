@@ -39,23 +39,27 @@ func TestGenerate(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			hasError := false
 			for _, file := range files {
-				t.Run(file.Name(), func(t *testing.T) {
+				ok := t.Run(file.Name(), func(t *testing.T) {
+					if hasError {
+						t.Skip("Skipping due to previous error")
+					}
 					switch op(file.Name()) {
 					case "add":
-						jrm, err := parseFile(filepath.Join(append(pathParts, file.Name())...))
+						metadata, jrm, err := parseFile(filepath.Join(append(pathParts, file.Name())...))
 						if err != nil {
 							t.Fatal(err)
 						}
-						if err := gen.Add(jrm); err != nil {
+						if err := gen.Add(metadata["name"], jrm); err != nil {
 							t.Fatal(err)
 						}
 					case "remove":
-						jrm, err := parseFile(filepath.Join(append(pathParts, file.Name())...))
+						metadata, _, err := parseFile(filepath.Join(append(pathParts, file.Name())...))
 						if err != nil {
 							t.Fatal(err)
 						}
-						if err := gen.Remove(jrm); err != nil {
+						if err := gen.Remove(metadata["name"]); err != nil {
 							t.Fatal(err)
 						}
 					case "check":
@@ -79,40 +83,52 @@ func TestGenerate(t *testing.T) {
 
 						fb = bytes.TrimSpace(fb)
 						if !cmp.Equal(string(b), string(fb)) {
-							t.Fatal(cmp.Diff(string(b), string(fb)))
+							t.Fatal("+expected, -actual\n" + cmp.Diff(string(fb), string(b)))
 						}
 					}
 				})
+				if !ok {
+					hasError = true
+				}
 			}
 		})
 	}
 }
 
-func parseFile(path string) (json.RawMessage, error) {
-	var jrm json.RawMessage
+func parseFile(path string) (metadata map[string]string, spec json.RawMessage, err error) {
+	body := struct {
+		Metadata map[string]string `json:"metadata"`
+		Spec     json.RawMessage   `json:"spec"`
+	}{}
 	switch filepath.Ext(path) {
 	case ".json":
 		f, err := os.OpenFile(path, os.O_RDONLY, 0o644)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		defer f.Close()
-		if err := json.NewDecoder(f).Decode(&jrm); err != nil {
-			return nil, err
+		if err := json.NewDecoder(f).Decode(&body); err != nil {
+			return nil, nil, err
 		}
 	case ".yaml":
 		b, err := os.ReadFile(path)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if err := yaml.Unmarshal(b, &jrm); err != nil {
-			return nil, err
+		if err := yaml.Unmarshal(b, &body); err != nil {
+			return nil, nil, err
 		}
 	default:
-		return nil, fmt.Errorf("File must be either .json or .yaml")
+		return nil, nil, fmt.Errorf("File must be either .json or .yaml")
 	}
 
-	return jrm, nil
+	if body.Metadata == nil {
+		if body.Metadata["name"] == "" {
+			return nil, nil, fmt.Errorf("Metadata must contain a name")
+		}
+	}
+
+	return body.Metadata, body.Spec, nil
 }
 
 func op(s string) string {
@@ -123,6 +139,6 @@ func op(s string) string {
 	case "add", "remove", "check":
 		return parts[len(parts)-1]
 	default:
-		panic("Filename must end with one of '_add', '_remove' or '_check'")
+		panic("Filename must end with one of '_add', '_remove', or '_check'")
 	}
 }

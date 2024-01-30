@@ -92,7 +92,10 @@
         "obj": {
           "type": "object",
           "properties": {
-            "key": {
+            "nested": {
+              "type": "string"
+            },
+            "other": {
               "type": "string"
             }
           }

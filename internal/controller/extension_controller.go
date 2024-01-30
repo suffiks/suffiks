@@ -3,6 +3,8 @@ package controller
 import (
 	"context"
 	goerrors "errors"
+	"reflect"
+	"time"
 
 	"github.com/suffiks/suffiks/internal/extension"
 	"github.com/suffiks/suffiks/internal/specgen"
@@ -69,41 +71,48 @@ func (r *ExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// then lets add the finalizer and update the object. This is equivalent
 		// registering our finalizer.
 		if !controllerutil.ContainsFinalizer(ext, finalizer) {
-			if err := r.CRDManager.Add(*(ext.DeepCopy())); err != nil {
-				if goerrors.Is(err, &specgen.AlreadyDefinedError{}) {
-					log.Info("CRD already exists, skipping", "error", err)
-				} else {
-					log.Error(err, "unable to add extension manifest")
-				}
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried
-				return ctrl.Result{}, err
-			}
 			controllerutil.AddFinalizer(ext, finalizer)
 			if err := r.Update(ctx, ext); err != nil {
 				log.Error(err, "unable to update Extension")
 				return ctrl.Result{}, err
 			}
+		}
 
-			for name, def := range crds {
-				crd, err := r.clientSet.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, v1.GetOptions{})
-				if err != nil {
-					log.Error(err, "fetch crd"+name)
-					return ctrl.Result{}, err
-				}
-
-				crd.Spec.Versions[0].Schema.OpenAPIV3Schema = r.CRDManager.Schema(def.Kind)
-				_, err = r.clientSet.ApiextensionsV1().CustomResourceDefinitions().Update(ctx, crd, v1.UpdateOptions{})
-				if err != nil && !errors.IsNotFound(err) {
-					log.Error(err, "unable to update CRD")
-					return ctrl.Result{}, err
-				}
-			}
-			ext.Status.Status = suffiksv1.ExtensionStatusApplied
-			if err := r.Status().Update(ctx, ext); err != nil {
-				log.Error(err, "unable to update Extension status")
+		if err := r.CRDManager.Add(*(ext.DeepCopy())); err != nil {
+			if goerrors.Is(err, &specgen.AlreadyDefinedError{}) {
+				log.Info("CRD already exists, skipping", "error", err)
+			} else {
+				log.Error(err, "unable to add extension manifest")
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried
 				return ctrl.Result{}, err
 			}
+		}
+
+		for name, def := range crds {
+			crd, err := r.clientSet.ApiextensionsV1().CustomResourceDefinitions().Get(ctx, name, v1.GetOptions{})
+			if err != nil {
+				log.Error(err, "fetch crd", "name", name)
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+			}
+
+			updatedScheme := r.CRDManager.Schema(def.Kind)
+			if !reflect.DeepEqual(crd.Spec.Versions[0].Schema.OpenAPIV3Schema, updatedScheme) {
+				log.Info("scheme is updated", "crd", name)
+				crd.Spec.Versions[0].Schema.OpenAPIV3Schema = updatedScheme
+				_, err = r.clientSet.ApiextensionsV1().CustomResourceDefinitions().Update(ctx, crd, v1.UpdateOptions{})
+				if err != nil {
+					log.Error(err, "unable to update CRD")
+					return ctrl.Result{RequeueAfter: 15 * time.Second}, err
+				}
+			}
+
+		}
+
+		ext.Status.Status = suffiksv1.ExtensionStatusApplied
+		if err := r.Status().Update(ctx, ext); err != nil {
+			log.Error(err, "unable to update Extension status")
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, err
 		}
 	} else {
 		// The object is being deleted

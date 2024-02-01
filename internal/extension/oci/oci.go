@@ -10,6 +10,7 @@ import (
 	"oras.land/oras-go/v2/content"
 	"oras.land/oras-go/v2/content/memory"
 	"oras.land/oras-go/v2/registry/remote"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -53,6 +54,8 @@ func Get(ctx context.Context, image, tag string) (map[string][]byte, error) {
 			}
 
 			files[layer.MediaType] = b
+		default:
+			log.FromContext(ctx, "oci.Get").Info("ignoring layer", "mediaType", layer.MediaType)
 		}
 	}
 

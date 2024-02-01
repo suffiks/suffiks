@@ -15,11 +15,13 @@ import (
 type Changeset struct {
 	lock sync.Mutex
 
-	environment []v1.EnvVar
-	labels      map[string]string
-	annotations map[string]string
-	envFrom     []v1.EnvFromSource
-	mergePatch  []byte
+	environment    []v1.EnvVar
+	labels         map[string]string
+	annotations    map[string]string
+	envFrom        []v1.EnvFromSource
+	mergePatch     []byte
+	initContainers []v1.Container
+	sidecars       []v1.Container
 }
 
 func (c *Changeset) Add(resp *protogen.Response) error {
@@ -69,6 +71,38 @@ func (c *Changeset) Add(resp *protogen.Response) error {
 		default:
 			return fmt.Errorf("unknown envfrom type: %q", r.EnvFrom.GetType())
 		}
+	case *protogen.Response_Container:
+		// Simple hack to convert the protogen.Container to a v1.Container
+		container := func() v1.Container {
+			c := v1.Container{}
+			b, err := json.Marshal(r.Container)
+			if err != nil {
+				panic(err)
+			}
+			err = json.Unmarshal(b, &c)
+			if err != nil {
+				panic(err)
+			}
+			return c
+		}()
+		c.sidecars = append(c.sidecars, container)
+	case *protogen.Response_InitContainer:
+		// Simple hack to convert the protogen.Container to a v1.Container
+		container := func() v1.Container {
+			c := v1.Container{}
+			b, err := json.Marshal(r.InitContainer)
+			if err != nil {
+				panic(err)
+			}
+			err = json.Unmarshal(b, &c)
+			if err != nil {
+				panic(err)
+			}
+
+			return c
+		}()
+
+		c.initContainers = append(c.initContainers, container)
 	default:
 		return fmt.Errorf("unexpected response type: %T", r)
 	}

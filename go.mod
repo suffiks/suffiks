@@ -3,7 +3,6 @@ module github.com/suffiks/suffiks
 go 1.21
 
 require (
-	github.com/davecgh/go-spew v1.1.1
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/go-logr/logr v1.4.1
 	github.com/go-playground/validator/v10 v10.17.0
@@ -11,12 +10,12 @@ require (
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.0-rc6
-	github.com/oras-project/oras-credentials-go v0.3.1
+	github.com/oras-project/oras-credentials-go v0.4.0
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/prometheus/client_golang v1.18.0
 	github.com/tetratelabs/wazero v1.6.0
 	github.com/urfave/cli/v2 v2.27.1
-	github.com/yuin/goldmark v1.6.0
+	github.com/yuin/goldmark v1.7.0
 	github.com/yuin/goldmark-meta v1.1.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.47.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.47.0
@@ -28,7 +27,6 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.14.0
-	golang.org/x/tools v0.17.0
 	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	k8s.io/api v0.29.1
@@ -38,7 +36,7 @@ require (
 	k8s.io/code-generator v0.29.1
 	k8s.io/gengo v0.0.0-20230829151522-9cce18d56c01
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
-	mvdan.cc/gofumpt v0.5.0
+	mvdan.cc/gofumpt v0.6.0
 	oras.land/oras-go/v2 v2.4.0
 	sigs.k8s.io/controller-runtime v0.17.0
 	sigs.k8s.io/controller-tools v0.14.0
@@ -50,6 +48,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.2 // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -96,6 +95,7 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
+	golang.org/x/tools v0.17.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect

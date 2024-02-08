@@ -14,13 +14,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	otrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const name = "suffiks"
 
 var (
-	tracer   otrace.Tracer = otrace.NewNoopTracerProvider().Tracer("noop")
+	tracer   otrace.Tracer = noop.NewTracerProvider().Tracer("noop")
 	provider *trace.TracerProvider
 )
 

@@ -1,13 +1,13 @@
 {
-  "description": "Application is the base Schema for the application API. This struct contains the base spec without any extensions. \n Fields that are not part of the base schema are stored in the `Rest` field.",
+  "description": "Application is the base Schema for the application API.\nThis struct contains the base spec without any extensions.\n\n\nFields that are not part of the base schema are stored in the `Rest` field.",
   "type": "object",
   "properties": {
     "apiVersion": {
-      "description": "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
+      "description": "APIVersion defines the versioned schema of this representation of an object.\nServers should convert recognized schemas to the latest internal value, and\nmay reject unrecognized values.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources",
       "type": "string"
     },
     "kind": {
-      "description": "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
+      "description": "Kind is a string value representing the REST resource this object represents.\nServers may infer this from the endpoint the client submits requests to.\nCannot be updated.\nIn CamelCase.\nMore info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds",
       "type": "string"
     },
     "metadata": {
@@ -28,7 +28,7 @@
           }
         },
         "env": {
-          "description": "Custom environment variables injected into your container. Specify either `value` or `valueFrom`, but not both.",
+          "description": "Custom environment variables injected into your container.\nSpecify either `value` or `valueFrom`, but not both.",
           "type": "array",
           "items": {
             "type": "object",
@@ -41,7 +41,7 @@
                 "type": "string"
               },
               "value": {
-                "description": "Environment variable value. Numbers and boolean values must be quoted. Required unless `valueFrom` is specified.",
+                "description": "Environment variable value. Numbers and boolean values must be quoted.\nRequired unless `valueFrom` is specified.",
                 "type": "string"
               },
               "valueFrom": {
@@ -69,17 +69,17 @@
           }
         },
         "envFrom": {
-          "description": "EnvFrom exposes all variables in the ConfigMap or Secret resources as environment variables. One of `configMap` or `secret` is required. \n Environment variables will take the form `KEY=VALUE`, where `key` is the ConfigMap or Secret key. You can specify as many keys as you like in a single ConfigMap or Secret. \n The ConfigMap and Secret resources must live in the same Kubernetes namespace as the Application resource.",
+          "description": "EnvFrom exposes all variables in the ConfigMap or Secret resources as environment variables.\nOne of `configMap` or `secret` is required.\n\n\nEnvironment variables will take the form `KEY=VALUE`, where `key` is the ConfigMap or Secret key.\nYou can specify as many keys as you like in a single ConfigMap or Secret.\n\n\nThe ConfigMap and Secret resources must live in the same Kubernetes namespace as the Application resource.",
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
               "configmap": {
-                "description": "Name of the `ConfigMap` where environment variables are specified. Required unless `secret` is set.",
+                "description": "Name of the `ConfigMap` where environment variables are specified.\nRequired unless `secret` is set.",
                 "type": "string"
               },
               "secret": {
-                "description": "Name of the `Secret` where environment variables are specified. Required unless `configMap` is set.",
+                "description": "Name of the `Secret` where environment variables are specified.\nRequired unless `configMap` is set.",
                 "type": "string"
               }
             }

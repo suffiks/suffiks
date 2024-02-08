@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.13.0
+    controller-gen.kubebuilder.io/version: v0.14.0
   name: works.suffiks.com
 spec:
   group: suffiks.com
@@ -17,19 +17,27 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: "Work is the base Schema for the work API. This struct contains
-          the base spec without any extensions. \n Fields that are not part of the
-          base schema are stored in the `Rest` field."
+        description: |-
+          Work is the base Schema for the work API.
+          This struct contains the base spec without any extensions.
+
+
+          Fields that are not part of the base schema are stored in the `Rest` field.
         properties:
           apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
           kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
             type: string
           metadata:
             type: object
@@ -42,7 +50,8 @@ spec:
                   type: string
                 type: array
               env:
-                description: Custom environment variables injected into your container.
+                description: |-
+                  Custom environment variables injected into your container.
                   Specify either `value` or `valueFrom`, but not both.
                 items:
                   properties:
@@ -51,8 +60,9 @@ spec:
                         digits, and the underscore `_` character.
                       type: string
                     value:
-                      description: Environment variable value. Numbers and boolean
-                        values must be quoted. Required unless `valueFrom` is specified.
+                      description: |-
+                        Environment variable value. Numbers and boolean values must be quoted.
+                        Required unless `valueFrom` is specified.
                       type: string
                     valueFrom:
                       description: Dynamically set environment variables based on
@@ -75,22 +85,27 @@ spec:
                   type: object
                 type: array
               envFrom:
-                description: "EnvFrom exposes all variables in the ConfigMap or Secret
-                  resources as environment variables. One of `configMap` or `secret`
-                  is required. \n Environment variables will take the form `KEY=VALUE`,
-                  where `key` is the ConfigMap or Secret key. You can specify as many
-                  keys as you like in a single ConfigMap or Secret. \n The ConfigMap
-                  and Secret resources must live in the same Kubernetes namespace
-                  as the Work resource."
+                description: |-
+                  EnvFrom exposes all variables in the ConfigMap or Secret resources as environment variables.
+                  One of `configMap` or `secret` is required.
+
+
+                  Environment variables will take the form `KEY=VALUE`, where `key` is the ConfigMap or Secret key.
+                  You can specify as many keys as you like in a single ConfigMap or Secret.
+
+
+                  The ConfigMap and Secret resources must live in the same Kubernetes namespace as the Work resource.
                 items:
                   properties:
                     configmap:
-                      description: Name of the `ConfigMap` where environment variables
-                        are specified. Required unless `secret` is set.
+                      description: |-
+                        Name of the `ConfigMap` where environment variables are specified.
+                        Required unless `secret` is set.
                       type: string
                     secret:
-                      description: Name of the `Secret` where environment variables
-                        are specified. Required unless `configMap` is set.
+                      description: |-
+                        Name of the `Secret` where environment variables are specified.
+                        Required unless `configMap` is set.
                       type: string
                   type: object
                 type: array
@@ -98,18 +113,18 @@ spec:
                 description: Your jobs's Docker image location and tag.
                 type: string
               restartPolicy:
-                description: RestartPolicy describes how the container should be restarted.
-                  Only one of the following restart policies may be specified. If
-                  none of the following policies is specified, the default one is
-                  Never. Read more about [Kubernetes handling pod and container failures](https://kubernetes.io/docs/concepts/workloads/controllers/job/#handling-pod-and-container-failures)
+                description: |-
+                  RestartPolicy describes how the container should be restarted. Only one of the following restart policies may be specified.
+                  If none of the following policies is specified, the default one is Never.
+                  Read more about [Kubernetes handling pod and container failures](https://kubernetes.io/docs/concepts/workloads/controllers/job/#handling-pod-and-container-failures)
                 enum:
                 - OnFailure
                 - Never
                 type: string
               schedule:
-                description: The [Cron](https://en.wikipedia.org/wiki/Cron) schedule
-                  for running the Work. If not specified, the Work will be run as
-                  a one-shot Job.
+                description: |-
+                  The [Cron](https://en.wikipedia.org/wiki/Cron) schedule for running the Work.
+                  If not specified, the Work will be run as a one-shot Job.
                 type: string
             required:
             - image

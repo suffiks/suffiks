@@ -1,5 +1,5 @@
 [tools]
-go = "1.21.6"
+go = "1.22.0"
 kubebuilder = "3.14.0"
 protoc = "25.2"
 protoc-gen-go = "1.32.0"

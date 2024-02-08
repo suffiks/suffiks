@@ -44,8 +44,7 @@ func Serve[T any](ctx context.Context, config Config, ext Extension[T], doc *Doc
 	if config.getTracing().Enabled() {
 		opts = append(
 			opts,
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()),
+			grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		)
 
 		if err := tracing.Provider(ctx, logr.Discard() /*, config.getTracing()*/); err != nil {

@@ -49,10 +49,10 @@ func TestRun(t *testing.T) {
 			ApiVersion: "suffiks.io/v1",
 			Uid:        "some-uid",
 			Labels: map[string]string{
-				"app": "my-app",
+				"app.kubernetes.io/name": "my-app",
 			},
 			Annotations: map[string]string{
-				"app": "my-app",
+				"app.kubernetes.io/name": "my-app",
 			},
 			RevisionID: "some-revision-id",
 		},

@@ -89,7 +89,7 @@ func (a *AppReconciler) CreateOrUpdate(ctx context.Context, app *suffiksv1.Appli
 				},
 			},
 			Selector: map[string]string{
-				"app": app.Name,
+				"app.kubernetes.io/name": app.Name,
 			},
 		}
 		if svc.Labels == nil {
@@ -244,7 +244,7 @@ func (a *AppReconciler) Default(ctx context.Context, obj *suffiksv1.Application)
 
 func (a *AppReconciler) newDeployment(app *suffiksv1.Application, spec suffiksv1.ApplicationSpec) *appsv1.Deployment {
 	labels := map[string]string{
-		"app": app.Name,
+		"app.kubernetes.io/name": app.Name,
 	}
 
 	ports := []corev1.ContainerPort{}

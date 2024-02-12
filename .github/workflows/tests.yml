@@ -43,7 +43,7 @@ jobs:
           go-version: ${{ steps.go-version.outputs.GOVERSION }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v4
         with:
           version: v${{ steps.go-version.outputs.GOLANGCI_LINT }}
 

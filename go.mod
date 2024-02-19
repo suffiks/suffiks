@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.6.0
 	github.com/mitchellh/hashstructure/v2 v2.0.2
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.1.0-rc6
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/prometheus/client_golang v1.18.0
 	github.com/tetratelabs/wazero v1.6.0
@@ -26,7 +26,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.14.0
-	google.golang.org/grpc v1.61.0
+	google.golang.org/grpc v1.61.1
 	google.golang.org/protobuf v1.32.0
 	k8s.io/api v0.29.1
 	k8s.io/apiextensions-apiserver v0.29.1
@@ -37,7 +37,7 @@ require (
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	mvdan.cc/gofumpt v0.6.0
 	oras.land/oras-go/v2 v2.4.0
-	sigs.k8s.io/controller-runtime v0.17.1
+	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/controller-tools v0.14.0
 	sigs.k8s.io/yaml v1.4.0
 )

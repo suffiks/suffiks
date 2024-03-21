@@ -12,7 +12,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/perimeterx/marshmallow v1.1.5
 	github.com/prometheus/client_golang v1.19.0
-	github.com/tetratelabs/wazero v1.6.0
+	github.com/tetratelabs/wazero v1.7.0
 	github.com/urfave/cli/v2 v2.27.1
 	github.com/yuin/goldmark v1.7.0
 	github.com/yuin/goldmark-meta v1.1.0
